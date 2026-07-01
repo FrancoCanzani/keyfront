@@ -1,0 +1,19 @@
+# deps
+node_modules/
+.turbo/
+
+# builds
+.next/
+dist/
+out/
+apps/backend/tmp/
+apps/backend/bin/
+
+# env
+.env
+.env.local
+.env.*.local
+
+# misc
+*.log
+.DS_Store
