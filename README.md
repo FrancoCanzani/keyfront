@@ -3,22 +3,20 @@
 Put your API behind us and get keys, rate limiting, usage analytics, and
 billing — with zero code changes.
 
-Polyglot monorepo:
+Monorepo (bun + turbo):
 
-- **`apps/backend/`** — Go module: gateway (data plane) + control plane + CLI. `chi`, `pgx`, `go-redis`.
+- **`apps/backend/`** — Bun + Hono API. `@hono/zod-openapi`, Drizzle (Postgres), ioredis.
 - **`apps/dashboard/`** — Next.js publisher dashboard.
 - **`packages/`** — shared TS packages (SDK, UI) — later.
 
 ## Dev
 
 ```bash
-# everything (gateway :8080 + dashboard :3000)
-make dev
+bun install
+bun dev              # backend (:8080) + dashboard (:3000) via turbo
 
-# or individually
-make dev-go
-make dev-web
-curl localhost:8080/health   # -> {"postgres":"ok","redis":"ok","status":"ok"}
+curl localhost:8080/health   # -> {"status":"ok","postgres":"ok","redis":"ok"}
+# OpenAPI spec at /doc, Swagger UI at /ui
 ```
 
 Local Postgres + Redis run as brew services (no Docker). Swap `DATABASE_URL`
@@ -26,4 +24,5 @@ for PlanetScale at deploy; Redis stays self-hosted.
 
 ## Status
 
-Phase 2 done: monorepo + Go backend + PG/Redis health check.
+Phase 2: monorepo + Hono backend with PG/Redis health check and OpenAPI docs.
+See `plan.md` for architecture, structure, and roadmap.
