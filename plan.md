@@ -13,7 +13,7 @@ touch us.
 - **Data plane** (`apps/gateway`, **Go**) — the proxy. Consumers' traffic on
   `*.gw.example.com`. Hot, stateless, scales horizontally. Reads config from
   Redis (cache) + Postgres. Go for throughput, low memory, predictable p99.
-- **Control plane** (`apps/control`, **Bun + Hono + TanStack Router**) — the API
+- **Control plane** (`apps/web`, **Bun + Hono + TanStack Router**) — the API
   + dashboard publishers use to manage services/keys/plans/usage/billing. Owns
   the database schema (Drizzle) and auth (better-auth).
 
@@ -22,7 +22,7 @@ Go data plane **reads** it. Shared Postgres is the source of truth.
 
 ## Stack
 
-**Control plane (`apps/control`)**
+**Control plane (`apps/web`)**
 
 - **Bun** runtime; **Hono** API; **TanStack Router** SPA (Vite).
 - **better-auth** (magic link + organization plugin) for auth.
@@ -63,7 +63,7 @@ api-gateway/
 │   │   ├── cmd/gateway/main.go     #   proxy entry (currently /health)
 │   │   ├── internal/{config,store,cache,routing,proxy,auth,ratelimit,usage}
 │   │   └── db/queries/             #   sqlc queries (read the shared schema)
-│   └── control/                    # Bun + Hono + TanStack Router
+│   └── web/                        # Bun + Hono + TanStack Router
 │       ├── src/
 │       │   ├── frontend/           # TanStack Router SPA, shadcn, Tailwind
 │       │   │   ├── routes/         #   __root, sign-in, auth.verify, _app/*
@@ -81,7 +81,7 @@ api-gateway/
 ├── Makefile · turbo.json · package.json
 ```
 
-## Data model (Drizzle, `apps/control/src/server/db/schema/`)
+## Data model (Drizzle, `apps/web/src/server/db/schema/`)
 
 - **auth** (better-auth): `user, session, account, verification, organization,
   member, invitation` — done.
@@ -122,7 +122,7 @@ api-gateway/
 
 ## Open decisions
 
-- Gateway sqlc schema source: point at `apps/control/drizzle` (generated DDL).
+- Gateway sqlc schema source: point at `apps/web/drizzle` (generated DDL).
 - Routing: subdomain (`acme.gw`) first; custom-domain CNAME + Cloudflare for SaaS
   later.
 - Hosting: Hetzner + Cloudflare now; Fly multi-region only if latency demands.

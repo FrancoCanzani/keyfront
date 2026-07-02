@@ -9,7 +9,7 @@ apps/gateway/tmp/
 apps/gateway/bin/
 
 # generated
-apps/control/src/frontend/routeTree.gen.ts
+apps/web/src/frontend/routeTree.gen.ts
 .tanstack/
 
 # env

@@ -6,7 +6,7 @@ billing — with zero code changes.
 Split into two planes:
 
 - **`apps/gateway/`** — Go data plane (the proxy hot path). `chi`, `pgx`, `go-redis`.
-- **`apps/control/`** — Bun + Hono + TanStack Router control plane + dashboard.
+- **`apps/web/`** — Bun + Hono + TanStack Router control plane + dashboard.
   better-auth, Drizzle (Postgres), shadcn/Tailwind.
 
 The control plane owns the schema (Drizzle) and writes config; the Go data plane

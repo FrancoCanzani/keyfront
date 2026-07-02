@@ -2,19 +2,19 @@ package main
 
 import (
 	"context"
-	"encoding/json"
+	"fmt"
 	"log"
 	"net/http"
-	"time"
+	"net/http/httputil"
+	"net/url"
 
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/chi/v5/middleware"
-	"github.com/jackc/pgx/v5/pgxpool"
-	"github.com/redis/go-redis/v9"
 
 	"github.com/francocanzani/api-gateway/internal/cache"
 	"github.com/francocanzani/api-gateway/internal/config"
 	"github.com/francocanzani/api-gateway/internal/store"
+	"github.com/francocanzani/api-gateway/internal/utils"
 )
 
 func main() {
@@ -35,33 +35,38 @@ func main() {
 
 	r := chi.NewRouter()
 	r.Use(middleware.Logger)
-	r.Get("/health", healthHandler(db, rdb))
+
+	r.HandleFunc("/*", func(w http.ResponseWriter, r *http.Request) {
+		fmt.Println(r.Host)
+
+		var origin string
+		var ok bool
+		if cfg.IsDev() {
+			origin, ok = utils.ResolveLocalHost(r.Host)
+		} else {
+			// Slice 2: origin, ok = utils.ResolveHost(ctx, db, r.Host)
+			http.Error(w, "not implemented", http.StatusNotImplemented)
+			return
+		}
+
+		if !ok {
+			http.Error(w, "unknown host", http.StatusNotFound)
+			return
+		}
+
+		target, err := url.Parse(origin)
+		if err != nil {
+			http.Error(w, "bad origin", http.StatusInternalServerError)
+			return
+		}
+
+		proxy := httputil.NewSingleHostReverseProxy(target)
+		proxy.ServeHTTP(w, r)
+	})
 
 	log.Printf("gateway listening on %s", cfg.Addr)
+
 	if err := http.ListenAndServe(cfg.Addr, r); err != nil {
 		log.Fatal(err)
-	}
-}
-
-func healthHandler(db *pgxpool.Pool, rdb *redis.Client) http.HandlerFunc {
-	return func(w http.ResponseWriter, req *http.Request) {
-		ctx, cancel := context.WithTimeout(req.Context(), 2*time.Second)
-		defer cancel()
-
-		out := map[string]string{"status": "ok", "postgres": "ok", "redis": "ok"}
-		code := http.StatusOK
-
-		if err := db.Ping(ctx); err != nil {
-			out["postgres"], out["status"] = "down", "degraded"
-			code = http.StatusServiceUnavailable
-		}
-		if err := rdb.Ping(ctx).Err(); err != nil {
-			out["redis"], out["status"] = "down", "degraded"
-			code = http.StatusServiceUnavailable
-		}
-
-		w.Header().Set("Content-Type", "application/json")
-		w.WriteHeader(code)
-		_ = json.NewEncoder(w).Encode(out)
 	}
 }
