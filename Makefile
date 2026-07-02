@@ -1,26 +1,23 @@
-.PHONY: dev dev-go dev-web migrate migrate-down sqlc build
+.PHONY: dev dev-gateway dev-control build generate migrate
 
 GOBIN := $(shell go env GOPATH)/bin
-DATABASE_URL ?= postgres://localhost/api_gateway
-BACKEND := apps/backend
 
+# Run the Go data plane + the control plane (Vite + Hono) together.
 dev:
-	$(MAKE) -j2 dev-go dev-web
+	$(MAKE) -j2 dev-gateway dev-control
 
-dev-go:
-	cd $(BACKEND) && $(GOBIN)/air
+dev-gateway:
+	cd apps/gateway && $(GOBIN)/air
 
-dev-web:
-	bun run dev
-
-migrate:
-	cd $(BACKEND) && $(GOBIN)/goose -dir db/migrations postgres "$(DATABASE_URL)" up
-
-migrate-down:
-	cd $(BACKEND) && $(GOBIN)/goose -dir db/migrations postgres "$(DATABASE_URL)" down
-
-sqlc:
-	cd $(BACKEND) && $(GOBIN)/sqlc generate
+dev-control:
+	cd apps/control && bun run dev
 
 build:
-	cd $(BACKEND) && go build ./...
+	cd apps/gateway && go build ./...
+
+# Schema is owned by the control plane (Drizzle); the Go data plane reads it.
+generate:
+	cd apps/control && bun run db:generate
+
+migrate:
+	cd apps/control && bun run db:migrate

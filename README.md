@@ -3,27 +3,37 @@
 Put your API behind us and get keys, rate limiting, usage analytics, and
 billing — with zero code changes.
 
-Polyglot monorepo:
+Split into two planes:
 
-- **`apps/backend/`** — Go module: gateway (data plane) + control plane + CLI. `chi`, `pgx`, `go-redis`.
-- **`apps/dashboard/`** — Next.js publisher dashboard.
-- **`packages/`** — shared TS packages (SDK, UI) — later.
+- **`apps/gateway/`** — Go data plane (the proxy hot path). `chi`, `pgx`, `go-redis`.
+- **`apps/control/`** — Bun + Hono + TanStack Router control plane + dashboard.
+  better-auth, Drizzle (Postgres), shadcn/Tailwind.
+
+The control plane owns the schema (Drizzle) and writes config; the Go data plane
+reads it. Shared Postgres is the source of truth.
 
 ## Dev
 
 ```bash
-# everything (gateway :8080 + dashboard :3000)
-make dev
+bun install
+make dev            # Go gateway (:8080) + control (Vite :5173, Hono :8787)
 
 # or individually
-make dev-go
-make dev-web
-curl localhost:8080/health   # -> {"postgres":"ok","redis":"ok","status":"ok"}
+make dev-gateway
+make dev-control
 ```
 
-Local Postgres + Redis run as brew services (no Docker). Swap `DATABASE_URL`
-for PlanetScale at deploy; Redis stays self-hosted.
+- Control: open http://localhost:5173 — sign in via magic link (the link is
+  printed to the server console in dev).
+- Schema: `make generate` (drizzle-kit generate) / `make migrate` (apply).
+
+Local Postgres + Redis run as brew services (no Docker). Swap `DATABASE_URL` for
+PlanetScale at deploy; Redis stays self-hosted.
 
 ## Status
 
-Phase 2 done: monorepo + Go backend + PG/Redis health check.
+- Data plane (Go): `/health` pings Postgres + Redis.
+- Control plane (Hono + TanStack): magic-link auth (better-auth) wired
+  end-to-end; `/api/health`; dashboard shell.
+
+See `plan.md` for architecture and roadmap.

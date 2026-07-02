@@ -3,11 +3,14 @@ node_modules/
 .turbo/
 
 # builds
-.next/
 dist/
 out/
-apps/backend/tmp/
-apps/backend/bin/
+apps/gateway/tmp/
+apps/gateway/bin/
+
+# generated
+apps/control/src/frontend/routeTree.gen.ts
+.tanstack/
 
 # env
 .env
