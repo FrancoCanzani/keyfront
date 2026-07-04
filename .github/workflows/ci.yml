@@ -1,0 +1,39 @@
+name: ci
+
+on:
+  push:
+    branches: [master]
+  pull_request:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: 1.2.21
+
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: apps/gateway/go.mod
+          cache-dependency-path: apps/gateway/go.sum
+
+      - run: bun install --frozen-lockfile
+
+      - name: Build everything (turbo)
+        run: bun run build
+
+      - name: gofmt
+        working-directory: apps/gateway
+        run: test -z "$(gofmt -l .)" || (gofmt -l . && exit 1)
+
+      - name: go vet + test
+        working-directory: apps/gateway
+        run: go vet ./... && go test ./...
+
+      - name: Schema drift (migrations match schema)
+        run: |
+          bun run db:generate
+          git diff --exit-code apps/web/drizzle/

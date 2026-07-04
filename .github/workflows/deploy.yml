@@ -1,0 +1,36 @@
+name: deploy
+
+on:
+  push:
+    branches: [master]
+  workflow_dispatch:
+
+concurrency:
+  group: deploy
+  cancel-in-progress: false
+
+jobs:
+  fly:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      # skips quietly until FLY_API_TOKEN is configured in repo secrets
+      - name: Check Fly token
+        id: token
+        run: echo "ok=${{ secrets.FLY_API_TOKEN != '' }}" >> "$GITHUB_OUTPUT"
+
+      - uses: superfly/flyctl-actions/setup-flyctl@master
+        if: steps.token.outputs.ok == 'true'
+
+      - name: Deploy control plane (runs migrations + redis sync on release)
+        if: steps.token.outputs.ok == 'true'
+        run: flyctl deploy --remote-only --config apps/web/fly.toml
+        env:
+          FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN }}
+
+      - name: Deploy gateway
+        if: steps.token.outputs.ok == 'true'
+        run: flyctl deploy --remote-only --config apps/gateway/fly.toml
+        env:
+          FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN }}
