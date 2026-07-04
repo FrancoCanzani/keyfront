@@ -67,8 +67,8 @@ consumer of that schema. There is exactly one migration system (drizzle-kit) —
 - **Postgres**: local via brew (`postgres@16`), no Docker. DB `api_gateway`,
   `DATABASE_URL=postgres://localhost/api_gateway`.
 - **Redis**: local via brew, `REDIS_URL=redis://localhost:6379`.
-- **Schema**: `make generate` (author schema → SQL in `apps/web/drizzle/`) then
-  `make migrate` (apply to local). Franco runs these.
+- **Schema**: `bun run db:generate` (author schema → SQL in `apps/web/drizzle/`)
+  then `bun run db:migrate:dev` (apply to local). Franco runs these.
 - **Gateway routing in dev**: `ENV=development` (the default) → the gateway uses
   the **static host map** (`utils.ResolveLocalHost`) and does **not** query
   Postgres for routing. It still connects to PG/Redis at boot (readiness), but
@@ -92,8 +92,8 @@ consumer of that schema. There is exactly one migration system (drizzle-kit) —
 ### Migration flow (who runs what)
 
 1. Franco edits the Drizzle schema in `apps/web/src/server/db/schema/`.
-2. `make generate` → versioned SQL written to `apps/web/drizzle/` (**committed**).
-3. `make migrate` → applies pending migrations to whatever `DATABASE_URL` points
+2. `bun run db:generate` → versioned SQL written to `apps/web/drizzle/` (**committed**).
+3. `bun run db:migrate:dev` (or `:prod`) → applies pending migrations to whatever `DATABASE_URL` points
    at (local in dev, PlanetScale in prod).
 4. The Go data plane reads the resulting tables. It never generates or applies.
 

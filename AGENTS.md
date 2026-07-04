@@ -5,7 +5,7 @@ with zero code changes. See `plan.md` for architecture and roadmap.
 
 ## Working rules
 
-- **Do not run dev servers or long-lived processes.** No `make dev`, `go run`,
+- **Do not run dev servers or long-lived processes.** No `bun dev`, `go run`,
   `air`, `vite`, `bun run dev`, background servers, or anything that binds a
   port. Franco runs those himself. Leaving a process open squats on `:8080` /
   `:5173` / `:8787` / `:9000` and breaks his dev server. If you need to verify
@@ -56,5 +56,6 @@ with zero code changes. See `plan.md` for architecture and roadmap.
 
 ## Local testing
 
-Franco runs `make dev` (gateway :8080 + web :5173/:8787 + a throwaway python
-origin on :9000). Proxy test: `curl -H "Host: foo.localhost" localhost:8080/`.
+Franco runs `bun dev` (turbo: gateway :8080 + web :5173/:8787 + a throwaway
+Hono echo origin on :9000). Proxy test:
+`curl -H "Host: foo.localhost" localhost:8080/`.

@@ -4,9 +4,13 @@
   "workspaces": ["apps/*", "packages/*"],
   "packageManager": "bun@1.2.21",
   "scripts": {
+    "predev": "(pg_isready -q -h localhost 2>/dev/null || brew services start postgresql@16); (redis-cli ping >/dev/null 2>&1 || brew services start redis)",
     "dev": "turbo dev",
     "build": "turbo build",
-    "lint": "turbo lint"
+    "lint": "turbo lint",
+    "db:generate": "bun run --cwd apps/web db:generate",
+    "db:migrate:dev": "bun run --cwd apps/web db:migrate",
+    "db:migrate:prod": "[ -n \"$DATABASE_URL_PROD\" ] || { echo 'DATABASE_URL_PROD is not set (root .env)'; exit 1; }; DATABASE_URL=\"$DATABASE_URL_PROD\" bun run --cwd apps/web db:migrate"
   },
   "devDependencies": {
     "turbo": "^2.5.0"

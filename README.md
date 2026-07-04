@@ -16,16 +16,19 @@ reads it. Shared Postgres is the source of truth.
 
 ```bash
 bun install
-make dev            # Go gateway (:8080) + control (Vite :5173, Hono :8787)
+bun dev             # starts Postgres/Redis if down, then turbo: Go gateway
+                    # (:8080), control (Vite :5173, Hono :8787), echo origin (:9000)
 
-# or individually
-make dev-gateway
-make dev-control
+# one app only
+bun run --cwd apps/gateway dev
+bun run --cwd apps/web dev
 ```
 
 - Control: open http://localhost:5173 — sign in via magic link (the link is
   printed to the server console in dev).
-- Schema: `make generate` (drizzle-kit generate) / `make migrate` (apply).
+- Schema: `bun run db:generate` (drizzle-kit generate), then
+  `bun run db:migrate:dev` (apply locally) or `bun run db:migrate:prod`
+  (PlanetScale, reads `DATABASE_URL_PROD`) — all from the repo root.
 
 Local Postgres + Redis run as brew services (no Docker). Swap `DATABASE_URL` for
 PlanetScale at deploy; Redis stays self-hosted.
