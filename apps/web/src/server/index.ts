@@ -1,11 +1,10 @@
 import { Hono } from "hono";
 import { logger } from "hono/logger";
-import { serveStatic } from "hono/bun";
 import { HTTPException } from "hono/http-exception";
 import { auth } from "./auth";
 import { checkDb } from "./db";
 import { authMiddleware } from "./middleware/auth";
-import { startUsageDrain } from "./usage-drain";
+import { drainUsage } from "./usage-drain";
 import { consumersRoutes } from "./routes/protected/consumers";
 import { keysRoutes } from "./routes/protected/keys";
 import { logsRoutes } from "./routes/protected/logs";
@@ -43,10 +42,10 @@ export const apiRoutes = app
 
 export type AppType = typeof apiRoutes;
 
-// Production: serve the built SPA. In dev, Vite serves it and proxies /api here.
-app.use("/*", serveStatic({ root: "./dist" }));
-app.get("/*", serveStatic({ path: "./dist/index.html" }));
-
-startUsageDrain();
-
-export default { port: Number(process.env.PORT ?? 8787), fetch: app.fetch };
+// Workers runtime: the assets binding serves the SPA; cron replaces setInterval
+export default {
+  fetch: app.fetch,
+  scheduled: async () => {
+    await drainUsage();
+  },
+};

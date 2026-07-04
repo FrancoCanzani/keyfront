@@ -54,9 +54,3 @@ export async function drainUsage() {
     .set({ lastUsedAt: new Date() })
     .where(inArray(apiKeys.id, keyIds));
 }
-
-export function startUsageDrain(intervalMs = 30_000) {
-  setInterval(() => {
-    drainUsage().catch((error) => console.error("[usage-drain]", error));
-  }, intervalMs);
-}

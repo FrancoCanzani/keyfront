@@ -1,0 +1,5 @@
+# copied to .dev.vars (gitignored) — wrangler/vite feed these to the local worker
+DATABASE_URL=postgres://localhost/api_gateway
+REDIS_URL=redis://localhost:6379
+BETTER_AUTH_SECRET=dev-secret-change-me
+BETTER_AUTH_URL=http://localhost:5173

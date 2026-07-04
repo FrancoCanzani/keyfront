@@ -1,0 +1,21 @@
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "api-gateway-web",
+  "main": "./src/server/index.ts",
+  "compatibility_date": "2025-10-08",
+  "compatibility_flags": ["nodejs_compat"],
+  "observability": { "enabled": true },
+  "upload_source_maps": true,
+  "assets": {
+    "directory": "./dist/client",
+    "not_found_handling": "single-page-application"
+  },
+  // usage drain (redis → usage_rollup) every minute
+  "triggers": { "crons": ["* * * * *"] },
+  "vars": {
+    "BETTER_AUTH_URL": "http://localhost:5173"
+  }
+  // prod secrets (wrangler secret put): DATABASE_URL (PlanetScale pooled),
+  // REDIS_URL (Upstash rediss://), BETTER_AUTH_SECRET, BETTER_AUTH_URL,
+  // CF_ACCOUNT_ID, CF_EMAIL_API_TOKEN, EMAIL_FROM
+}
