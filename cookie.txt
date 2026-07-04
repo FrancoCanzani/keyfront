@@ -1,1 +1,0 @@
-better-auth.session_token=2a05cc4b82144ef3ac9485c842d72ccf90884d72c0ed441987625cb4fa0094ab.pbW5qEK6bAF9dSdIJ_g1Mkvlrd5PhcAMU0GPvQGpY64
