@@ -2,8 +2,12 @@ package main
 
 import (
 	"context"
+	"errors"
 	"log"
 	"net/http"
+	"os/signal"
+	"syscall"
+	"time"
 
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/chi/v5/middleware"
@@ -11,40 +15,41 @@ import (
 	"github.com/francocanzani/api-gateway/internal/cache"
 	"github.com/francocanzani/api-gateway/internal/config"
 	"github.com/francocanzani/api-gateway/internal/proxy"
-	"github.com/francocanzani/api-gateway/internal/store"
 )
 
 func main() {
 	cfg := config.Load()
-	ctx := context.Background()
 
-	db, err := store.NewPostgres(ctx, cfg.DatabaseURL)
-
-	if err != nil {
-		log.Fatalf("postgres: %v", err)
-	}
-
-	defer db.Close()
+	ctx, stop := signal.NotifyContext(context.Background(), syscall.SIGINT, syscall.SIGTERM)
+	defer stop()
 
 	rdb, err := cache.NewRedis(ctx, cfg.RedisURL)
-
 	if err != nil {
 		log.Fatalf("redis: %v", err)
 	}
-
 	defer func() { _ = rdb.Close() }()
 
 	r := chi.NewRouter()
-
 	r.Use(middleware.Logger)
 
-	p := proxy.New(cfg, db)
-
+	p := proxy.New(cfg, rdb)
 	r.HandleFunc("/*", p.Handle)
 
-	log.Printf("gateway listening on %s", cfg.Addr)
+	srv := &http.Server{Addr: cfg.Addr, Handler: r}
 
-	if err := http.ListenAndServe(cfg.Addr, r); err != nil {
-		log.Fatal(err)
+	go func() {
+		log.Printf("gateway listening on %s", cfg.Addr)
+		if err := srv.ListenAndServe(); err != nil && !errors.Is(err, http.ErrServerClosed) {
+			log.Fatalf("serve: %v", err)
+		}
+	}()
+
+	<-ctx.Done()
+	log.Println("shutting down")
+
+	shutdownCtx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+	if err := srv.Shutdown(shutdownCtx); err != nil {
+		log.Printf("shutdown: %v", err)
 	}
 }

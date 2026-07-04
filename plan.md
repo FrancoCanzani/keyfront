@@ -195,6 +195,22 @@ billing       organization_id · stripe_customer_id · status (active|past_due|�
   plane on Bun; `DATABASE_URL` → PlanetScale; self-host Redis; `ENV=production`.
 - **Later — tiers:** caching, analytics, dev portal, alerts, status page.
 
+## Decided (do not relitigate)
+
+- **The data plane stays Go, and reads Redis only** (2026-07, fourth and
+  final lap — Tyk's architecture, verified in their source). The control
+  plane owns PG (truth) and write-throughs config into Redis
+  (`route:{host_key}`, `key:{hash}`, `plan:{id}`, `billing:{orgId}`); the Go
+  gateway reads Redis + in-mem cache and never touches PG in either
+  direction. Usage counters drain Redis→PG via a control-plane interval
+  (tyk-pump style). `bun run redis:sync` rebuilds Redis from PG.
+  Why: kills the two-language-one-DB problem (no pgx/sqlc), the Go left is
+  thin glue, config changes propagate instantly (write-through beats TTL
+  polling), deploy stays binary+Redis on one box. Accepted trade: Redis down
+  = gateway down (no PG fallback) — mitigated by in-mem cache, colocation,
+  and resync. Workers port considered and rejected (gRPC loss, lock-in,
+  rewrite cost); Hono-everything rejected twice before that.
+
 ## Open decisions
 
 - Gateway schema reads: plain `pgx` now → `sqlc` (pointed at `apps/web/drizzle`)
