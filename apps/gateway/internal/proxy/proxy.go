@@ -6,6 +6,7 @@ import (
 	"net/http"
 	"net/http/httputil"
 	"net/url"
+	"strconv"
 	"time"
 
 	"github.com/redis/go-redis/v9"
@@ -83,7 +84,8 @@ func (p *Proxy) Handle(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 
-		if _, found, err = lookup[Plan](ctx, p.rdb, p.plans, "plan:"+key.PlanID); err != nil || !found {
+		plan, found, err := lookup[Plan](ctx, p.rdb, p.plans, "plan:"+key.PlanID)
+		if err != nil || !found {
 			// a key without its plan means the sync is broken — resync heals it
 			log.Printf("plan %s missing for key %s: %v", key.PlanID, key.KeyID, err)
 			http.Error(w, "upstream lookup failed", http.StatusBadGateway)
@@ -100,6 +102,34 @@ func (p *Proxy) Handle(w http.ResponseWriter, r *http.Request) {
 			http.Error(w, "publisher subscription inactive", http.StatusPaymentRequired)
 			return
 		}
+
+		rl := p.allow(ctx, key.KeyID, plan)
+		w.Header().Set("X-RateLimit-Limit", strconv.Itoa(plan.RPS))
+		w.Header().Set("X-RateLimit-Remaining", strconv.Itoa(rl.remaining))
+		if rl.quotaExceeded {
+			http.Error(w, "monthly quota exceeded", http.StatusTooManyRequests)
+			return
+		}
+		if !rl.allowed {
+			w.Header().Set("Retry-After", "1")
+			http.Error(w, "rate limit exceeded", http.StatusTooManyRequests)
+			return
+		}
+
+		target, err := url.Parse(route.OriginURL)
+		if err != nil {
+			http.Error(w, "bad origin", http.StatusInternalServerError)
+			return
+		}
+
+		r.Header.Del("Authorization")
+		r.Header.Set("X-Gateway-Secret", p.cfg.GatewaySecret)
+
+		rec := &statusRecorder{ResponseWriter: w, status: http.StatusOK}
+		start := time.Now()
+		httputil.NewSingleHostReverseProxy(target).ServeHTTP(rec, r)
+		p.recordUsage(key.KeyID, rec.status, time.Since(start))
+		return
 	}
 
 	target, err := url.Parse(route.OriginURL)

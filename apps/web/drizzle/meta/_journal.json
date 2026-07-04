@@ -15,6 +15,13 @@
       "when": 1783104096470,
       "tag": "0001_confused_sheva_callister",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1783174560374,
+      "tag": "0002_silky_vanisher",
+      "breakpoints": true
     }
   ]
 }

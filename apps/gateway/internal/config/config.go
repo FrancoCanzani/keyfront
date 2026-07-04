@@ -11,6 +11,7 @@ type Config struct {
 	RedisURL      string
 	Env           string
 	GatewayDomain string
+	GatewaySecret string
 }
 
 func Load() Config {
@@ -23,6 +24,7 @@ func Load() Config {
 		RedisURL:      getenv("REDIS_URL", "redis://localhost:6379"),
 		Env:           getenv("ENV", "development"),
 		GatewayDomain: getenv("GATEWAY_DOMAIN", "localhost"),
+		GatewaySecret: getenv("GATEWAY_SECRET", "dev-secret"),
 	}
 }
 

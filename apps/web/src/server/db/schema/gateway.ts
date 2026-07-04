@@ -101,6 +101,12 @@ export const usageRollup = pgTable(
       .references(() => apiKeys.id, { onDelete: "cascade" }),
     windowStart: timestamp("window_start").notNull(),
     count: bigint("count", { mode: "number" }).notNull(),
+    okCount: bigint("ok_count", { mode: "number" }).notNull().default(0),
+    err4Count: bigint("err4_count", { mode: "number" }).notNull().default(0),
+    err5Count: bigint("err5_count", { mode: "number" }).notNull().default(0),
+    latencyMsSum: bigint("latency_ms_sum", { mode: "number" })
+      .notNull()
+      .default(0),
   },
   (t) => [primaryKey({ columns: [t.keyId, t.windowStart] })],
 );
