@@ -1,5 +1,6 @@
-import { Link, useLocation } from "@tanstack/react-router";
+import { Link, useParams } from "@tanstack/react-router";
 import { Layers } from "lucide-react";
+import { OrganizationMenuItems } from "@/components/organization-menu";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -19,22 +20,37 @@ import {
   SidebarMenuButton,
   SidebarMenuItem,
 } from "@/components/ui/sidebar";
+import { useSelectedSidebarPath } from "@/hooks/use-selected-sidebar-path";
+import { MAIN_NAV } from "@/lib/auth-shell-nav";
 
-type AppSidebarProps = {
-  user: { name: string; email: string };
-  onSignOut: () => void;
+export type AppShellUser = {
+  name: string;
+  email: string;
 };
 
+type AppSidebarProps = {
+  user: AppShellUser;
+  onSignOut: () => void | Promise<void>;
+};
+
+const sidebarItemClassName =
+  "h-8 min-h-8 !text-sm font-normal data-active:font-normal [&_svg]:!size-3.5";
+
+const NAV_ICON_BY_TO = {
+  "/$orgId/services": Layers,
+} as const;
+
 export function AppSidebar({ user, onSignOut }: AppSidebarProps) {
-  const { pathname } = useLocation();
+  const { orgId } = useParams({ from: "/$orgId" });
+  const { isActive } = useSelectedSidebarPath();
 
   return (
     <Sidebar>
       <SidebarHeader>
         <SidebarMenu>
           <SidebarMenuItem>
-            <SidebarMenuButton size="lg" asChild>
-              <Link to="/services">
+            <SidebarMenuButton size="lg" asChild tooltip="api-gateway">
+              <Link to="/$orgId/services" params={{ orgId }}>
                 <div className="grid flex-1 text-left text-sm leading-tight">
                   <span className="truncate font-medium">api-gateway</span>
                 </div>
@@ -47,22 +63,28 @@ export function AppSidebar({ user, onSignOut }: AppSidebarProps) {
         <SidebarGroup>
           <SidebarGroupContent>
             <SidebarMenu className="gap-0.5">
-              <SidebarMenuItem>
-                <SidebarMenuButton
-                  asChild
-                  isActive={pathname.startsWith("/services")}
-                  tooltip="Services"
-                  className="h-8 min-h-8 !text-sm font-normal data-active:font-normal [&_svg]:!size-3.5"
-                >
-                  <Link
-                    to="/services"
-                    className="flex min-w-0 flex-1 items-center gap-2"
-                  >
-                    <Layers className="shrink-0 text-sidebar-foreground" />
-                    <span className="truncate">Services</span>
-                  </Link>
-                </SidebarMenuButton>
-              </SidebarMenuItem>
+              {MAIN_NAV.map((item) => {
+                const Icon = NAV_ICON_BY_TO[item.to];
+                return (
+                  <SidebarMenuItem key={item.to}>
+                    <SidebarMenuButton
+                      asChild
+                      isActive={isActive(item.to)}
+                      tooltip={item.label}
+                      className={sidebarItemClassName}
+                    >
+                      <Link
+                        to={item.to}
+                        params={{ orgId }}
+                        className="flex min-w-0 flex-1 items-center gap-2"
+                      >
+                        <Icon className="shrink-0 text-sidebar-foreground" />
+                        <span className="truncate">{item.label}</span>
+                      </Link>
+                    </SidebarMenuButton>
+                  </SidebarMenuItem>
+                );
+              })}
             </SidebarMenu>
           </SidebarGroupContent>
         </SidebarGroup>
@@ -84,7 +106,7 @@ export function AppSidebar({ user, onSignOut }: AppSidebarProps) {
               <DropdownMenuContent
                 side="top"
                 align="end"
-                className="min-w-52 w-56 rounded-md p-1 text-xs"
+                className="max-h-[min(24rem,var(--radix-dropdown-menu-content-available-height))] min-w-52 w-56 overflow-y-auto rounded-md p-1 text-xs"
               >
                 <DropdownMenuLabel className="grid gap-0.5 px-2 py-1 font-normal text-foreground">
                   <span className="truncate text-sm">{user.name}</span>
@@ -92,6 +114,32 @@ export function AppSidebar({ user, onSignOut }: AppSidebarProps) {
                     {user.email}
                   </span>
                 </DropdownMenuLabel>
+                <DropdownMenuSeparator />
+                <OrganizationMenuItems />
+                <DropdownMenuItem
+                  asChild
+                  className="min-h-7 px-2 py-1 text-xs font-normal focus:bg-muted/60 focus-visible:ring-0"
+                >
+                  <Link
+                    to="/$orgId/settings"
+                    params={{ orgId }}
+                    className="cursor-pointer"
+                  >
+                    Settings
+                  </Link>
+                </DropdownMenuItem>
+                <DropdownMenuItem
+                  asChild
+                  className="min-h-7 px-2 py-1 text-xs font-normal focus:bg-muted/60 focus-visible:ring-0"
+                >
+                  <Link
+                    to="/$orgId/team"
+                    params={{ orgId }}
+                    className="cursor-pointer"
+                  >
+                    Team
+                  </Link>
+                </DropdownMenuItem>
                 <DropdownMenuSeparator />
                 <DropdownMenuItem
                   variant="destructive"

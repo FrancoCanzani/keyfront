@@ -2,12 +2,31 @@ import { zValidator } from "@hono/zod-validator";
 import { and, desc, eq } from "drizzle-orm";
 import { Hono } from "hono";
 import { HTTPException } from "hono/http-exception";
+import { z } from "zod";
 import { services } from "../../../db/schema/gateway";
-import { getOrganizationId } from "../../../middleware/auth";
+import { getOrganizationId, getUser } from "../../../middleware/auth";
 import type { AppRouteEnv } from "../../../types";
-import { serviceIdParamSchema } from "./schemas";
+import { hostKeySchema, serviceIdParamSchema } from "./schemas";
 
 export const getServices = new Hono<AppRouteEnv>()
+  .get(
+    "/availability",
+    zValidator("query", z.object({ hostKey: z.string().min(1).max(64) })),
+    async (c) => {
+      getUser(c);
+      const { hostKey } = c.req.valid("query");
+      // advisory only — the unique constraint is what actually prevents collisions
+      if (!hostKeySchema.safeParse(hostKey).success) {
+        return c.json({ available: false });
+      }
+      const [row] = await c
+        .get("db")
+        .select({ id: services.id })
+        .from(services)
+        .where(eq(services.hostKey, hostKey));
+      return c.json({ available: !row });
+    },
+  )
   .get("/", async (c) => {
     const organizationId = getOrganizationId(c);
     const rows = await c

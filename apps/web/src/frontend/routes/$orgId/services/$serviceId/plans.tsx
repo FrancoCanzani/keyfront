@@ -23,12 +23,17 @@ import {
 import { Button } from "@/components/ui/button";
 import { DataTable } from "@/components/ui/data-table";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
+import {
+  controlClassName,
+  FormFieldGroup,
+  FormFieldLabel,
+  FormSection,
+} from "@/components/form-layout";
 import { plansQuery, readApiError } from "@/lib/gateway-queries";
 import { client } from "@/lib/rpc";
 import { createPlanSchema } from "../../../../../server/routes/protected/plans/schemas";
 
-export const Route = createFileRoute("/_app/services/$serviceId/plans")({
+export const Route = createFileRoute("/$orgId/services/$serviceId/plans")({
   loader: ({ context, params }) =>
     context.queryClient.ensureQueryData(plansQuery(params.serviceId)),
   component: PlansTab,
@@ -156,19 +161,22 @@ function PlansTab() {
   });
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-8">
       {plans.length === 0 ? (
-        <div className="rounded-md border border-dashed p-6 text-center text-sm text-muted-foreground">
+        <p className="text-sm text-muted-foreground">
           No plans yet. A plan sets the rate limit and quota an API key gets.
-        </div>
+        </p>
       ) : (
         <DataTable table={table} />
       )}
 
-      <section className="max-w-lg space-y-4 rounded-md border p-4">
-        <h2 className="text-sm font-medium">New plan</h2>
+      <FormSection
+        title="New plan"
+        description="Rate limits and quotas applied to API keys on this plan."
+        className="max-w-lg border-t pt-6"
+      >
         <form
-          className="space-y-4"
+          className="grid gap-5"
           onSubmit={(e) => {
             e.preventDefault();
             form.handleSubmit();
@@ -176,46 +184,51 @@ function PlansTab() {
         >
           <form.Field name="name">
             {(field) => (
-              <div className="space-y-1.5">
-                <Label htmlFor={field.name}>Name</Label>
+              <FormFieldGroup>
+                <FormFieldLabel htmlFor={field.name}>Name</FormFieldLabel>
                 <Input
                   id={field.name}
+                  className={controlClassName}
                   value={field.state.value}
                   onBlur={field.handleBlur}
                   onChange={(e) => field.handleChange(e.target.value)}
                   placeholder="Free"
                 />
-              </div>
+              </FormFieldGroup>
             )}
           </form.Field>
 
           <div className="grid grid-cols-2 gap-4">
             <form.Field name="rps">
               {(field) => (
-                <div className="space-y-1.5">
-                  <Label htmlFor={field.name}>Requests per second</Label>
+                <FormFieldGroup>
+                  <FormFieldLabel htmlFor={field.name}>
+                    Requests per second
+                  </FormFieldLabel>
                   <Input
                     id={field.name}
                     type="number"
+                    className={controlClassName}
                     value={field.state.value}
                     onBlur={field.handleBlur}
                     onChange={(e) => field.handleChange(e.target.valueAsNumber)}
                   />
-                </div>
+                </FormFieldGroup>
               )}
             </form.Field>
             <form.Field name="burst">
               {(field) => (
-                <div className="space-y-1.5">
-                  <Label htmlFor={field.name}>Burst</Label>
+                <FormFieldGroup>
+                  <FormFieldLabel htmlFor={field.name}>Burst</FormFieldLabel>
                   <Input
                     id={field.name}
                     type="number"
+                    className={controlClassName}
                     value={field.state.value}
                     onBlur={field.handleBlur}
                     onChange={(e) => field.handleChange(e.target.valueAsNumber)}
                   />
-                </div>
+                </FormFieldGroup>
               )}
             </form.Field>
           </div>
@@ -223,11 +236,12 @@ function PlansTab() {
           <div className="grid grid-cols-2 gap-4">
             <form.Field name="monthlyQuota">
               {(field) => (
-                <div className="space-y-1.5">
-                  <Label htmlFor={field.name}>Monthly quota</Label>
+                <FormFieldGroup>
+                  <FormFieldLabel htmlFor={field.name}>Monthly quota</FormFieldLabel>
                   <Input
                     id={field.name}
                     type="number"
+                    className={controlClassName}
                     value={field.state.value ?? ""}
                     onBlur={field.handleBlur}
                     onChange={(e) =>
@@ -237,27 +251,30 @@ function PlansTab() {
                     }
                     placeholder="Unlimited"
                   />
-                </div>
+                </FormFieldGroup>
               )}
             </form.Field>
             <form.Field name="priceCents">
               {(field) => (
-                <div className="space-y-1.5">
-                  <Label htmlFor={field.name}>Price (cents / month)</Label>
+                <FormFieldGroup>
+                  <FormFieldLabel htmlFor={field.name}>
+                    Price (cents / month)
+                  </FormFieldLabel>
                   <Input
                     id={field.name}
                     type="number"
+                    className={controlClassName}
                     value={field.state.value}
                     onBlur={field.handleBlur}
                     onChange={(e) => field.handleChange(e.target.valueAsNumber)}
                   />
-                </div>
+                </FormFieldGroup>
               )}
             </form.Field>
           </div>
 
           {createPlan.error ? (
-            <p className="text-sm text-destructive">
+            <p role="alert" className="text-xs text-destructive">
               {createPlan.error.message}
             </p>
           ) : null}
@@ -266,13 +283,17 @@ function PlansTab() {
             selector={(state) => [state.canSubmit, state.isSubmitting]}
           >
             {([canSubmit, isSubmitting]) => (
-              <Button type="submit" disabled={!canSubmit || isSubmitting}>
+              <Button
+                type="submit"
+                className="h-8"
+                disabled={!canSubmit || isSubmitting}
+              >
                 {isSubmitting ? "Creating…" : "Create plan"}
               </Button>
             )}
           </form.Subscribe>
         </form>
-      </section>
+      </FormSection>
     </div>
   );
 }

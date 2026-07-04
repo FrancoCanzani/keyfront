@@ -1,6 +1,22 @@
 import { queryOptions } from "@tanstack/react-query";
 import { client } from "./rpc";
 
+export const orgInfoQuery = (orgId: string) =>
+  queryOptions({
+    queryKey: ["organization-info", orgId],
+    queryFn: async () => {
+      const res = await client.api.organization.info.$get();
+      if (!res.ok) {
+        throw Object.assign(new Error("Failed to load organization"), {
+          status: res.status,
+        });
+      }
+      return res.json();
+    },
+    staleTime: 60_000,
+    retry: false,
+  });
+
 export const servicesQuery = queryOptions({
   queryKey: ["services"],
   queryFn: async () => {

@@ -4,6 +4,7 @@ import { Hono } from "hono";
 import { HTTPException } from "hono/http-exception";
 import { services } from "../../../db/schema/gateway";
 import { getOrganizationId } from "../../../middleware/auth";
+import { syncRoute } from "../../../sync";
 import type { AppRouteEnv } from "../../../types";
 import { serviceIdParamSchema, updateServiceSchema } from "./schemas";
 
@@ -26,6 +27,7 @@ export const updateService = new Hono<AppRouteEnv>().patch(
     if (!row) {
       throw new HTTPException(404, { message: "Service not found" });
     }
+    await syncRoute(row);
     return c.json(row);
   },
 );

@@ -4,6 +4,7 @@ import { Hono } from "hono";
 import { HTTPException } from "hono/http-exception";
 import { plans, services } from "../../../db/schema/gateway";
 import { getOrganizationId } from "../../../middleware/auth";
+import { syncPlan } from "../../../sync";
 import type { AppRouteEnv } from "../../../types";
 import { createPlanSchema } from "./schemas";
 
@@ -29,6 +30,7 @@ export const createPlan = new Hono<AppRouteEnv>().post(
     }
 
     const [row] = await c.get("db").insert(plans).values(input).returning();
+    await syncPlan(row);
     return c.json(row, 201);
   },
 );

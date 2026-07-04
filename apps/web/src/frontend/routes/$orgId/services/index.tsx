@@ -8,17 +8,20 @@ import {
 } from "@tanstack/react-table";
 import type { InferResponseType } from "hono/client";
 import { z } from "zod";
+import { PageHeader } from "@/components/page-header";
+import { PageShell } from "@/components/page-shell";
 import { Button } from "@/components/ui/button";
 import { DataTable } from "@/components/ui/data-table";
 import { Input } from "@/components/ui/input";
 import { gatewayDomain, servicesQuery } from "@/lib/gateway-queries";
+import { controlClassName } from "@/components/form-layout";
 import type { client } from "@/lib/rpc";
 
 const searchSchema = z.object({
   q: z.string().default(""),
 });
 
-export const Route = createFileRoute("/_app/services/")({
+export const Route = createFileRoute("/$orgId/services/")({
   validateSearch: searchSchema,
   loader: ({ context }) => context.queryClient.ensureQueryData(servicesQuery),
   component: ServicesPage,
@@ -38,7 +41,7 @@ const columns = [
   columnHelper.accessor("hostKey", {
     header: () => <span className="px-2">Gateway URL</span>,
     cell: (info) => (
-      <code className="px-2 text-xs text-muted-foreground">
+      <code className="px-2 font-mono text-xs tabular-nums text-muted-foreground">
         {`${info.getValue()}.${gatewayDomain}`}
       </code>
     ),
@@ -54,7 +57,7 @@ const columns = [
   columnHelper.accessor("createdAt", {
     header: () => <span className="px-2">Created</span>,
     cell: (info) => (
-      <span className="px-2 text-muted-foreground">
+      <span className="px-2 font-mono text-muted-foreground tabular-nums">
         {new Date(info.getValue()).toLocaleDateString()}
       </span>
     ),
@@ -63,6 +66,7 @@ const columns = [
 ];
 
 function ServicesPage() {
+  const { orgId } = Route.useParams();
   const { data } = useSuspenseQuery(servicesQuery);
   const { q } = Route.useSearch();
   const navigate = Route.useNavigate();
@@ -81,22 +85,28 @@ function ServicesPage() {
   });
 
   return (
-    <div className="space-y-4">
-      <div className="flex items-center justify-between gap-4">
-        <h1 className="text-lg font-medium">Services</h1>
-        <div className="flex items-center gap-2">
-          <Input
-            value={q}
-            onChange={(e) => table.setGlobalFilter(e.target.value)}
-            placeholder="Filter services…"
-            className="w-56"
-          />
-          <Button asChild>
-            <Link to="/services/new">New service</Link>
-          </Button>
-        </div>
-      </div>
-
+    <PageShell
+      header={
+        <PageHeader
+          title="Services"
+          actions={
+            <>
+              <Input
+                value={q}
+                onChange={(e) => table.setGlobalFilter(e.target.value)}
+                placeholder="Filter services…"
+                className={`${controlClassName} w-44 sm:w-56`}
+              />
+              <Button asChild className="h-8 shrink-0">
+                <Link to="/$orgId/services/new" params={{ orgId }}>
+                  New service
+                </Link>
+              </Button>
+            </>
+          }
+        />
+      }
+    >
       {data.length === 0 ? (
         <div className="rounded-md border border-dashed p-8 text-center text-sm text-muted-foreground">
           No services yet. Create one to put an API behind the gateway.
@@ -106,12 +116,12 @@ function ServicesPage() {
           table={table}
           onRowClick={(service) =>
             navigate({
-              to: "/services/$serviceId",
-              params: { serviceId: service.id },
+              to: "/$orgId/services/$serviceId",
+              params: { orgId, serviceId: service.id },
             })
           }
         />
       )}
-    </div>
+    </PageShell>
   );
 }

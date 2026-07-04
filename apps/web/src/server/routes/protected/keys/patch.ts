@@ -4,6 +4,7 @@ import { Hono } from "hono";
 import { HTTPException } from "hono/http-exception";
 import { apiKeys, consumers, services } from "../../../db/schema/gateway";
 import { getOrganizationId } from "../../../middleware/auth";
+import { removeKey } from "../../../sync";
 import type { AppRouteEnv } from "../../../types";
 import { keyIdParamSchema } from "./schemas";
 
@@ -16,7 +17,7 @@ export const revokeKey = new Hono<AppRouteEnv>().patch(
     const db = c.get("db");
 
     const [owned] = await db
-      .select({ id: apiKeys.id })
+      .select({ id: apiKeys.id, keyHash: apiKeys.keyHash })
       .from(apiKeys)
       .innerJoin(consumers, eq(apiKeys.consumerId, consumers.id))
       .innerJoin(services, eq(consumers.serviceId, services.id))
@@ -36,6 +37,7 @@ export const revokeKey = new Hono<AppRouteEnv>().patch(
         prefix: apiKeys.prefix,
         status: apiKeys.status,
       });
+    await removeKey(owned.keyHash);
     return c.json(row);
   },
 );

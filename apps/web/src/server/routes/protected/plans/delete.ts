@@ -4,6 +4,7 @@ import { Hono } from "hono";
 import { HTTPException } from "hono/http-exception";
 import { plans, services } from "../../../db/schema/gateway";
 import { getOrganizationId } from "../../../middleware/auth";
+import { removePlan } from "../../../sync";
 import type { AppRouteEnv } from "../../../types";
 import { planIdParamSchema } from "./schemas";
 
@@ -28,6 +29,7 @@ export const deletePlan = new Hono<AppRouteEnv>().delete(
 
     try {
       await c.get("db").delete(plans).where(eq(plans.id, id));
+      await removePlan(id);
     } catch (error) {
       // FK restrict: api_keys still reference this plan
       if ((error as { code?: string }).code === "23503") {

@@ -9,5 +9,6 @@ export type AppRouteEnv = {
     user: Session["user"] | null;
     session: Session["session"] | null;
     organizationId: string | null;
+    organizationRole: string | null;
   };
 };

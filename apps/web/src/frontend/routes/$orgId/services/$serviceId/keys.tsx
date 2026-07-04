@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { useForm } from "@tanstack/react-form";
 import { useMutation, useQueryClient, useSuspenseQuery } from "@tanstack/react-query";
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, Link } from "@tanstack/react-router";
 import {
   createColumnHelper,
   getCoreRowModel,
@@ -23,7 +23,6 @@ import {
 import { Button } from "@/components/ui/button";
 import { DataTable } from "@/components/ui/data-table";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import {
   Select,
   SelectContent,
@@ -32,6 +31,12 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import {
+  controlClassName,
+  FormFieldGroup,
+  FormFieldLabel,
+  FormSection,
+} from "@/components/form-layout";
+import {
   consumersQuery,
   keysQuery,
   plansQuery,
@@ -39,7 +44,7 @@ import {
 } from "@/lib/gateway-queries";
 import { client } from "@/lib/rpc";
 
-export const Route = createFileRoute("/_app/services/$serviceId/keys")({
+export const Route = createFileRoute("/$orgId/services/$serviceId/keys")({
   loader: ({ context, params }) =>
     Promise.all([
       context.queryClient.ensureQueryData(consumersQuery(params.serviceId)),
@@ -55,7 +60,7 @@ type IssuedKey = InferResponseType<typeof client.api.keys.$post, 201>;
 const columnHelper = createColumnHelper<ApiKeyRow>();
 
 function KeysTab() {
-  const { serviceId } = Route.useParams();
+  const { orgId, serviceId } = Route.useParams();
   const { data: consumers } = useSuspenseQuery(consumersQuery(serviceId));
   const { data: plans } = useSuspenseQuery(plansQuery(serviceId));
   const { data: keys } = useSuspenseQuery(keysQuery(serviceId));
@@ -131,7 +136,9 @@ function KeysTab() {
     columnHelper.accessor("prefix", {
       header: () => <span className="px-2">Key</span>,
       cell: (info) => (
-        <code className="px-2 text-xs">{info.getValue()}…</code>
+        <code className="px-2 font-mono text-xs tabular-nums">
+          {info.getValue()}…
+        </code>
       ),
     }),
     columnHelper.accessor("consumerExternalRef", {
@@ -163,7 +170,7 @@ function KeysTab() {
     columnHelper.accessor("lastUsedAt", {
       header: () => <span className="px-2">Last used</span>,
       cell: (info) => (
-        <span className="px-2 text-muted-foreground">
+        <span className="px-2 font-mono text-xs text-muted-foreground tabular-nums">
           {info.getValue()
             ? new Date(info.getValue() as string).toLocaleString()
             : "Never"}
@@ -210,20 +217,22 @@ function KeysTab() {
     getCoreRowModel: getCoreRowModel(),
   });
 
+  const canIssueKey = consumers.length > 0 && plans.length > 0;
+
   return (
-    <div className="space-y-6">
+    <div className="space-y-10">
       {issuedKey ? (
-        <div className="space-y-2 rounded-md border border-green-700/40 bg-green-50 p-4 dark:bg-green-950/20">
+        <div className="space-y-3 rounded-lg border border-green-700/40 bg-green-50 p-4 dark:bg-green-950/20">
           <p className="text-sm font-medium">
             Key issued — copy it now, it won't be shown again
           </p>
           <div className="flex items-center gap-2">
-            <code className="flex-1 overflow-x-auto rounded-md border bg-background px-3 py-2 text-xs">
+            <code className="flex-1 overflow-x-auto rounded-lg border bg-background px-3 py-2 font-mono text-xs tabular-nums">
               {issuedKey.key}
             </code>
             <Button
               variant="outline"
-              size="sm"
+              className="h-8 shrink-0"
               onClick={() => {
                 navigator.clipboard.writeText(issuedKey.key);
                 toast.success("Copied to clipboard");
@@ -233,7 +242,7 @@ function KeysTab() {
             </Button>
             <Button
               variant="outline"
-              size="sm"
+              className="h-8 shrink-0"
               onClick={() => setIssuedKey(null)}
             >
               Done
@@ -242,9 +251,12 @@ function KeysTab() {
         </div>
       ) : null}
 
-      <section className="flex flex-wrap items-end gap-4 rounded-md border p-4">
+      <FormSection
+        title="Add a consumer"
+        description="A consumer is whoever calls your API — a customer, team, or app. Give them a label so you can tell keys apart later."
+      >
         <form
-          className="flex items-end gap-2"
+          className="max-w-md"
           onSubmit={(e) => {
             e.preventDefault();
             consumerForm.handleSubmit();
@@ -252,104 +264,140 @@ function KeysTab() {
         >
           <consumerForm.Field name="externalRef">
             {(field) => (
-              <div className="space-y-1.5">
-                <Label htmlFor={field.name}>New consumer</Label>
-                <Input
-                  id={field.name}
-                  value={field.state.value}
-                  onChange={(e) => field.handleChange(e.target.value)}
-                  placeholder="customer@acme.com"
-                  className="w-56"
-                />
-              </div>
+              <FormFieldGroup>
+                <FormFieldLabel htmlFor={field.name}>Label</FormFieldLabel>
+                <div className="flex gap-2">
+                  <Input
+                    id={field.name}
+                    className={controlClassName}
+                    value={field.state.value}
+                    onChange={(e) => field.handleChange(e.target.value)}
+                    placeholder="customer@acme.com"
+                  />
+                  <Button
+                    type="submit"
+                    variant="outline"
+                    className="h-8 shrink-0 px-3"
+                    disabled={addConsumer.isPending}
+                  >
+                    Add consumer
+                  </Button>
+                </div>
+              </FormFieldGroup>
             )}
           </consumerForm.Field>
-          <Button
-            type="submit"
-            variant="outline"
-            disabled={addConsumer.isPending}
-          >
-            Add
-          </Button>
         </form>
+      </FormSection>
 
-        <form
-          className="flex items-end gap-2"
-          onSubmit={(e) => {
-            e.preventDefault();
-            keyForm.handleSubmit();
-          }}
-        >
-          <keyForm.Field name="consumerId">
-            {(field) => (
-              <div className="space-y-1.5">
-                <Label htmlFor={field.name}>Consumer</Label>
-                <Select
-                  value={field.state.value}
-                  onValueChange={field.handleChange}
-                >
-                  <SelectTrigger id={field.name} className="w-44">
-                    <SelectValue placeholder="Select…" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {consumers.map((consumer) => (
-                      <SelectItem key={consumer.id} value={consumer.id}>
-                        {consumer.externalRef ?? consumer.id.slice(0, 8)}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-            )}
-          </keyForm.Field>
-          <keyForm.Field name="planId">
-            {(field) => (
-              <div className="space-y-1.5">
-                <Label htmlFor={field.name}>Plan</Label>
-                <Select
-                  value={field.state.value}
-                  onValueChange={field.handleChange}
-                >
-                  <SelectTrigger id={field.name} className="w-36">
-                    <SelectValue placeholder="Select…" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {plans.map((plan) => (
-                      <SelectItem key={plan.id} value={plan.id}>
-                        {plan.name}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-            )}
-          </keyForm.Field>
-          <keyForm.Subscribe
-            selector={(state) => [
-              state.values.consumerId,
-              state.values.planId,
-              state.isSubmitting,
-            ]}
+      <FormSection
+        title="Issue a key"
+        description="Pick a consumer and a plan. The plan sets rate limits and quotas for that key."
+        className="border-t pt-8"
+      >
+        {plans.length === 0 ? (
+          <p className="text-sm text-muted-foreground">
+            Create a plan first on the{" "}
+            <Link
+              to="/$orgId/services/$serviceId/plans"
+              params={{ orgId, serviceId }}
+              className="underline-offset-4 hover:underline"
+            >
+              Plans
+            </Link>{" "}
+            tab.
+          </p>
+        ) : consumers.length === 0 ? (
+          <p className="text-sm text-muted-foreground">
+            Add a consumer above before issuing a key.
+          </p>
+        ) : (
+          <form
+            className="flex max-w-xl flex-col gap-4 sm:flex-row sm:items-end"
+            onSubmit={(e) => {
+              e.preventDefault();
+              keyForm.handleSubmit();
+            }}
           >
-            {([consumerId, planId, isSubmitting]) => (
-              <Button
-                type="submit"
-                disabled={!consumerId || !planId || Boolean(isSubmitting)}
-              >
-                Issue key
-              </Button>
-            )}
-          </keyForm.Subscribe>
-        </form>
-      </section>
+            <keyForm.Field name="consumerId">
+              {(field) => (
+                <FormFieldGroup className="min-w-0 flex-1">
+                  <FormFieldLabel htmlFor={field.name}>Consumer</FormFieldLabel>
+                  <Select
+                    value={field.state.value}
+                    onValueChange={field.handleChange}
+                  >
+                    <SelectTrigger id={field.name} className={controlClassName}>
+                      <SelectValue placeholder="Select consumer…" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {consumers.map((consumer) => (
+                        <SelectItem key={consumer.id} value={consumer.id}>
+                          {consumer.externalRef ?? consumer.id.slice(0, 8)}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </FormFieldGroup>
+              )}
+            </keyForm.Field>
+            <keyForm.Field name="planId">
+              {(field) => (
+                <FormFieldGroup className="min-w-0 flex-1 sm:max-w-44">
+                  <FormFieldLabel htmlFor={field.name}>Plan</FormFieldLabel>
+                  <Select
+                    value={field.state.value}
+                    onValueChange={field.handleChange}
+                  >
+                    <SelectTrigger id={field.name} className={controlClassName}>
+                      <SelectValue placeholder="Select plan…" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {plans.map((plan) => (
+                        <SelectItem key={plan.id} value={plan.id}>
+                          {plan.name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </FormFieldGroup>
+              )}
+            </keyForm.Field>
+            <keyForm.Subscribe
+              selector={(state) => [
+                state.values.consumerId,
+                state.values.planId,
+                state.isSubmitting,
+              ]}
+            >
+              {([consumerId, planId, isSubmitting]) => (
+                <Button
+                  type="submit"
+                  className="h-8 shrink-0 sm:mb-0"
+                  disabled={
+                    !canIssueKey || !consumerId || !planId || Boolean(isSubmitting)
+                  }
+                >
+                  Issue key
+                </Button>
+              )}
+            </keyForm.Subscribe>
+          </form>
+        )}
+      </FormSection>
 
-      {keys.length === 0 ? (
-        <div className="rounded-md border border-dashed p-6 text-center text-sm text-muted-foreground">
-          No keys yet. Add a consumer, pick a plan and issue their key.
-        </div>
-      ) : (
-        <DataTable table={table} />
-      )}
+      <FormSection
+        title="Active keys"
+        description="All keys issued for this service."
+        className="border-t pt-8"
+      >
+        {keys.length === 0 ? (
+          <p className="text-sm text-muted-foreground">
+            No keys yet.
+          </p>
+        ) : (
+          <DataTable table={table} />
+        )}
+      </FormSection>
     </div>
   );
 }

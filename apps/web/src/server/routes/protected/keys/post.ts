@@ -5,6 +5,7 @@ import { Hono } from "hono";
 import { HTTPException } from "hono/http-exception";
 import { apiKeys, consumers, plans, services } from "../../../db/schema/gateway";
 import { getOrganizationId } from "../../../middleware/auth";
+import { syncKey } from "../../../sync";
 import type { AppRouteEnv } from "../../../types";
 import { createKeySchema } from "./schemas";
 
@@ -53,6 +54,13 @@ export const createKey = new Hono<AppRouteEnv>().post(
         status: apiKeys.status,
         createdAt: apiKeys.createdAt,
       });
+
+    await syncKey({
+      keyHash,
+      keyId: row.id,
+      serviceId: consumer.serviceId,
+      planId: input.planId,
+    });
 
     // the raw key is returned exactly once and never stored
     return c.json({ ...row, key: rawKey }, 201);

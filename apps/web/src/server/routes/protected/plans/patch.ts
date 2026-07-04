@@ -4,6 +4,7 @@ import { Hono } from "hono";
 import { HTTPException } from "hono/http-exception";
 import { plans, services } from "../../../db/schema/gateway";
 import { getOrganizationId } from "../../../middleware/auth";
+import { syncPlan } from "../../../sync";
 import type { AppRouteEnv } from "../../../types";
 import { planIdParamSchema, updatePlanSchema } from "./schemas";
 
@@ -34,6 +35,7 @@ export const updatePlan = new Hono<AppRouteEnv>().patch(
       .set(input)
       .where(eq(plans.id, id))
       .returning();
+    await syncPlan(row);
     return c.json(row);
   },
 );
