@@ -1,9 +1,12 @@
 import { eq } from "drizzle-orm";
-import { db } from "./db";
+import { createDatabase } from "./db";
 import { apiKeys, consumers, plans, services } from "./db/schema/gateway";
-import { redis } from "./redis";
+import { createRedis } from "./lib/redis";
 
 // rebuilds redis from PG: bun run sync
+
+const redis = createRedis();
+const { db, close } = createDatabase();
 
 async function clearPrefix(prefix: string) {
   let cursor = "0";
@@ -68,4 +71,5 @@ console.log(
   `synced ${serviceRows.length} routes, ${planRows.length} plans, ${keyRows.length} keys`,
 );
 await redis.quit();
+await close();
 process.exit(0);

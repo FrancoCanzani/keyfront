@@ -1,10 +1,10 @@
 import { Hono } from "hono";
 import { logger } from "hono/logger";
 import { HTTPException } from "hono/http-exception";
-import { auth } from "./auth";
-import { checkDb } from "./db";
+import { createAuth } from "./auth";
+import { checkDb, createDatabase } from "./db";
 import { authMiddleware } from "./middleware/auth";
-import { drainUsage } from "./usage-drain";
+import { drainUsage } from "./lib/usage-drain";
 import { consumersRoutes } from "./routes/protected/consumers";
 import { keysRoutes } from "./routes/protected/keys";
 import { logsRoutes } from "./routes/protected/logs";
@@ -27,11 +27,13 @@ app.onError((error, c) => {
   return c.json({ error: "Internal Server Error" }, 500);
 });
 
-app.on(["POST", "GET"], "/api/auth/*", (c) => auth.handler(c.req.raw));
+app.on(["POST", "GET"], "/api/auth/*", (c) =>
+  createAuth(c.get("db")).handler(c.req.raw),
+);
 
 export const apiRoutes = app
   .basePath("/api")
-  .get("/health", async (c) => c.json({ ok: await checkDb() }))
+  .get("/health", async (c) => c.json({ ok: await checkDb(c.get("db")) }))
   .route("/organization", organizationRoutes)
   .route("/services", servicesRoutes)
   .route("/plans", plansRoutes)
@@ -46,6 +48,11 @@ export type AppType = typeof apiRoutes;
 export default {
   fetch: app.fetch,
   scheduled: async () => {
-    await drainUsage();
+    const { db, close } = createDatabase();
+    try {
+      await drainUsage(db);
+    } finally {
+      await close();
+    }
   },
 };

@@ -1,6 +1,6 @@
-# fly apps create api-gateway-gw   (change the name here if taken)
-# fly secrets set -a api-gateway-gw REDIS_URL=... GATEWAY_SECRET=...
-app = "api-gateway-gw"
+# fly apps create keyfront-gw   (change the name here if taken)
+# fly secrets set -a keyfront-gw REDIS_URL=... GATEWAY_SECRET=...
+app = "keyfront-gw"
 primary_region = "eze"
 
 [build]

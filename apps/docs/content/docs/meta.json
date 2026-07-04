@@ -1,0 +1,11 @@
+{
+  "title": "Keyfront",
+  "pages": [
+    "index",
+    "quickstart",
+    "concepts",
+    "gateway",
+    "guides",
+    "troubleshooting"
+  ]
+}

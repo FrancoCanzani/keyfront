@@ -1,0 +1,17 @@
+---
+title: Request lifecycle
+description: How Keyfront processes a request before forwarding it to your origin.
+---
+
+For each request, Keyfront:
+
+1. Resolves the request hostname to a service.
+2. Hashes and authenticates the presented API key.
+3. Loads the consumer plan and publisher billing state.
+4. Applies rate and quota policy.
+5. Records usage without blocking the response path.
+6. Removes the gateway credential and forwards the request to the origin.
+7. Streams the origin response to the consumer.
+
+Gateway configuration is served from Redis and cached in memory. PostgreSQL is
+owned by the control plane and is not queried from the gateway request path.

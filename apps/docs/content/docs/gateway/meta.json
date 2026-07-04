@@ -1,0 +1,4 @@
+{
+  "title": "Gateway reference",
+  "pages": ["authentication", "errors", "headers"]
+}

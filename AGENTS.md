@@ -1,4 +1,4 @@
-# api-gateway — agent conventions
+# Keyfront — agent conventions
 
 Put a customer's API behind us; they get keys, rate limiting, usage, and billing
 with zero code changes. See `plan.md` for architecture and roadmap.
@@ -32,6 +32,15 @@ with zero code changes. See `plan.md` for architecture and roadmap.
 - **No barrel files.** A domain `index.ts` that composes verb routers via
   `.route()` is a composition root, not a barrel.
 - Sentence case for UI copy; `cond ? <JSX/> : null` for conditional rendering.
+- **No em dashes in UI copy.** Use a period, comma, or colon ("—" as a
+  missing-value placeholder in tables is fine).
+- **Never hand-write `components/ui` primitives.** Always
+  `bunx shadcn@latest add <component> --overwrite`; customize only after the
+  CLI has generated the file.
+- **Route files are route definitions only** — `createFileRoute` config
+  (loader, search schema, `component:` reference). The page component lives in
+  `features/<domain>/` and reads params/search via `getRouteApi("<route-id>")`.
+  See `routes/sign-in.tsx` → `features/auth/sign-in.tsx`.
 
 ### Control plane (Hono, `apps/web/src/backend`)
 

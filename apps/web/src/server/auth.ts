@@ -2,11 +2,12 @@ import { betterAuth } from "better-auth";
 import { drizzleAdapter } from "better-auth/adapters/drizzle";
 import { magicLink, organization } from "better-auth/plugins";
 import { eq } from "drizzle-orm";
-import { db } from "./db";
+import type { Database } from "./db";
 import * as authSchema from "./db/schema/auth";
-import { sendEmail } from "./email";
+import { sendEmail } from "./lib/email";
 
-export const auth = betterAuth({
+export function createAuth(db: Database) {
+  return betterAuth({
   database: drizzleAdapter(db, { provider: "pg", schema: authSchema }),
   databaseHooks: {
     session: {
@@ -72,7 +73,7 @@ export const auth = betterAuth({
         }
         await sendEmail({
           to: email,
-          subject: "Sign in to api-gateway",
+          subject: "Sign in to Keyfront",
           text: `Sign in: ${clientUrl}\n\nThis link can only be used once. If you didn't request it, ignore this email.`,
           html: `<p><a href="${clientUrl}">Click here to sign in</a></p><p>This link can only be used once. If you didn't request it, ignore this email.</p>`,
         });
@@ -82,4 +83,7 @@ export const auth = betterAuth({
   secret: process.env.BETTER_AUTH_SECRET ?? "dev-secret-change-me",
   baseURL: process.env.BETTER_AUTH_URL ?? "http://localhost:5173",
   trustedOrigins: ["http://localhost:5173"],
-});
+  });
+}
+
+export type Auth = ReturnType<typeof createAuth>;

@@ -1,0 +1,11 @@
+---
+title: Secure your origin
+description: Ensure production traffic reaches your origin through Keyfront.
+---
+
+Validate the `X-Gateway-Secret` header at your origin and reject requests with a
+missing or incorrect value. Store the expected secret outside source control and
+compare values in constant time.
+
+For stronger enforcement, combine the shared secret with network restrictions
+that allow only Keyfront gateway addresses to reach the origin.

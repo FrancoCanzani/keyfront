@@ -12,9 +12,9 @@ import (
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/chi/v5/middleware"
 
-	"github.com/francocanzani/api-gateway/internal/cache"
-	"github.com/francocanzani/api-gateway/internal/config"
-	"github.com/francocanzani/api-gateway/internal/proxy"
+	"github.com/francocanzani/keyfront/internal/cache"
+	"github.com/francocanzani/keyfront/internal/config"
+	"github.com/francocanzani/keyfront/internal/proxy"
 )
 
 func main() {

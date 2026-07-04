@@ -1,4 +1,4 @@
-module github.com/francocanzani/api-gateway
+module github.com/francocanzani/keyfront
 
 go 1.25.1
 

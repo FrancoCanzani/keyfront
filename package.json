@@ -1,5 +1,5 @@
 {
-  "name": "api-gateway",
+  "name": "keyfront",
   "private": true,
   "workspaces": ["apps/*", "packages/*"],
   "packageManager": "bun@1.2.21",

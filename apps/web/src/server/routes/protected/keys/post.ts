@@ -5,7 +5,7 @@ import { Hono } from "hono";
 import { HTTPException } from "hono/http-exception";
 import { apiKeys, consumers, plans, services } from "../../../db/schema/gateway";
 import { getOrganizationId } from "../../../middleware/auth";
-import { syncKey } from "../../../sync";
+import { syncKey } from "../../../lib/sync";
 import type { AppRouteEnv } from "../../../types";
 import { createKeySchema } from "./schemas";
 

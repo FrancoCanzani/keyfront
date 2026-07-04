@@ -1,4 +1,4 @@
-# api-gateway
+# Keyfront
 
 Put your API behind us and get keys, rate limiting, usage analytics, and
 billing — with zero code changes.

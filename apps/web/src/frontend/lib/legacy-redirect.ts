@@ -36,7 +36,7 @@ export function parseLegacyRedirect(
   const rest = pathname.slice("/services/".length);
 
   if (rest === "new") {
-    return { to: "/$orgId/services/new", params: { orgId } };
+    return { to: "/$orgId/services", params: { orgId } };
   }
 
   const [serviceId, ...sub] = rest.split("/");

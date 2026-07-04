@@ -4,7 +4,7 @@ import { Hono } from "hono";
 import { HTTPException } from "hono/http-exception";
 import { services } from "../../../db/schema/gateway";
 import { getOrganizationId } from "../../../middleware/auth";
-import { redis } from "../../../redis";
+import { withRedis } from "../../../lib/redis";
 import type { AppRouteEnv } from "../../../types";
 import { logsQuerySchema } from "./schemas";
 
@@ -39,7 +39,9 @@ export const getLogs = new Hono<AppRouteEnv>().get(
       throw new HTTPException(404, { message: "Service not found" });
     }
 
-    const raw = await redis.lrange(`log:${serviceId}`, 0, 99);
+    const raw = await withRedis((redis) =>
+      redis.lrange(`log:${serviceId}`, 0, 99),
+    );
     const entries: LogEntry[] = raw.map((line) => JSON.parse(line));
     return c.json(entries);
   },

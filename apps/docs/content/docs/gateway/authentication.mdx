@@ -1,0 +1,16 @@
+---
+title: Authentication
+description: Authenticate requests sent through the Keyfront gateway.
+---
+
+Send the consumer API key as a bearer token:
+
+```http
+Authorization: Bearer gw_live_your_key
+```
+
+Keys are scoped through their consumer to one service and plan. A revoked,
+missing, or unknown key returns `401 Unauthorized`.
+
+Keyfront strips the `Authorization` header before forwarding the request so the
+gateway credential never reaches your origin.

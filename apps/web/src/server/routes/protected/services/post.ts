@@ -3,7 +3,7 @@ import { Hono } from "hono";
 import { HTTPException } from "hono/http-exception";
 import { services } from "../../../db/schema/gateway";
 import { getOrganizationId } from "../../../middleware/auth";
-import { syncRoute } from "../../../sync";
+import { syncRoute } from "../../../lib/sync";
 import type { AppRouteEnv } from "../../../types";
 import { createServiceSchema } from "./schemas";
 

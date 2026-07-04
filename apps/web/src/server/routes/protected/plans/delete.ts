@@ -4,7 +4,7 @@ import { Hono } from "hono";
 import { HTTPException } from "hono/http-exception";
 import { plans, services } from "../../../db/schema/gateway";
 import { getOrganizationId } from "../../../middleware/auth";
-import { removePlan } from "../../../sync";
+import { removePlan } from "../../../lib/sync";
 import type { AppRouteEnv } from "../../../types";
 import { planIdParamSchema } from "./schemas";
 

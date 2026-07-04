@@ -5,16 +5,22 @@ import * as gateway from "./schema/gateway";
 
 const schema = { ...auth, ...gateway };
 
-const client = postgres(
-  process.env.DATABASE_URL ?? "postgres://localhost/api_gateway",
-);
+export function createDatabase() {
+  const client = postgres(
+    process.env.DATABASE_URL ??
+      `postgres://${process.env.USER ?? "postgres"}@localhost/api_gateway`,
+  );
+  return {
+    db: drizzle(client, { schema }),
+    close: () => client.end(),
+  };
+}
 
-export const db = drizzle(client, { schema });
-export type Database = typeof db;
+export type Database = ReturnType<typeof createDatabase>["db"];
 
-export async function checkDb(): Promise<boolean> {
+export async function checkDb(db: Database): Promise<boolean> {
   try {
-    await client`select 1`;
+    await db.execute("select 1");
     return true;
   } catch {
     return false;

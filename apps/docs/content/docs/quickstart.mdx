@@ -1,0 +1,34 @@
+---
+title: Proxy your first API
+description: Create a service and send one authenticated request through Keyfront.
+---
+
+<Callout type="warn" title="Work in progress">
+  The control-plane workflow is still under development. This page defines the
+  intended onboarding contract and will be updated as the dashboard ships.
+</Callout>
+
+## 1. Create a service
+
+In the Keyfront dashboard, create a service and enter the HTTPS URL of your
+existing API. Keyfront assigns the service a gateway hostname.
+
+## 2. Create a plan
+
+Set the request rate, burst allowance, and optional monthly quota consumers on
+the plan receive.
+
+## 3. Issue an API key
+
+Create a consumer and issue a key for the plan. Copy the key immediately;
+Keyfront stores only its SHA-256 hash and cannot show it again.
+
+## 4. Send a request
+
+```bash
+curl https://your-service.gw.keyfront.dev/health \
+  -H "Authorization: Bearer gw_live_your_key"
+```
+
+Keyfront authenticates the key, applies its plan, records usage, and streams the
+origin response back to the caller.

@@ -8,7 +8,7 @@ import (
 
 	"github.com/redis/go-redis/v9"
 
-	"github.com/francocanzani/api-gateway/internal/cache"
+	"github.com/francocanzani/keyfront/internal/cache"
 )
 
 const memTTL = 15 * time.Second

@@ -1,4 +1,4 @@
-import { AuthShell } from "@/components/auth-shell";
+import { DashboardShell } from "@/components/dashboard-shell";
 import { orgInfoQuery } from "@/lib/gateway-queries";
 import { getOrganizationId, setOrganizationId } from "@/lib/org-api";
 import { authClient } from "@/lib/auth-client";
@@ -55,5 +55,5 @@ export const Route = createFileRoute("/$orgId")({
 
     return { user: data.user, organization };
   },
-  component: AuthShell,
+  component: DashboardShell,
 });

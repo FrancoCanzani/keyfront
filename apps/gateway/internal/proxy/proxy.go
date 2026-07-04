@@ -11,9 +11,9 @@ import (
 
 	"github.com/redis/go-redis/v9"
 
-	"github.com/francocanzani/api-gateway/internal/cache"
-	"github.com/francocanzani/api-gateway/internal/config"
-	"github.com/francocanzani/api-gateway/internal/utils"
+	"github.com/francocanzani/keyfront/internal/cache"
+	"github.com/francocanzani/keyfront/internal/config"
+	"github.com/francocanzani/keyfront/internal/utils"
 )
 
 type Proxy struct {

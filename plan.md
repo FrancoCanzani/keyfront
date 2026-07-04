@@ -1,4 +1,4 @@
-# api-gateway — build plan
+# Keyfront — build plan
 
 ## Product
 
@@ -65,7 +65,7 @@ consumer of that schema. There is exactly one migration system (drizzle-kit) —
 ### Dev
 
 - **Postgres**: local via brew (`postgres@16`), no Docker. DB `api_gateway`,
-  `DATABASE_URL=postgres://localhost/api_gateway`.
+  `DATABASE_URL=postgres://YOUR_USER@localhost/api_gateway`.
 - **Redis**: local via brew, `REDIS_URL=redis://localhost:6379`.
 - **Schema**: `bun run db:generate` (author schema → SQL in `apps/web/drizzle/`)
   then `bun run db:migrate:dev` (apply to local). Franco runs these.
@@ -122,7 +122,7 @@ otherwise prod would serve the dev host-map. That belongs in the deploy config.
 
 | var | dev | prod |
 |---|---|---|
-| `DATABASE_URL` | `postgres://localhost/api_gateway` | PlanetScale URL |
+| `DATABASE_URL` | `postgres://YOUR_USER@localhost/api_gateway` | PlanetScale URL |
 | `REDIS_URL` | `redis://localhost:6379` | self-hosted on Hetzner |
 | `ENV` | `development` (default) | `production` (set explicitly) |
 

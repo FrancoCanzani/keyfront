@@ -5,6 +5,10 @@ node_modules/
 # builds
 dist/
 out/
+.next/
+.open-next/
+.source/
+*.tsbuildinfo
 apps/gateway/tmp/
 apps/gateway/bin/
 

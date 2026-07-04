@@ -1,0 +1,16 @@
+---
+title: Headers
+description: Headers consumed, removed, and added by the gateway.
+---
+
+## Consumer authentication
+
+Keyfront consumes and removes the `Authorization` header containing the gateway
+API key.
+
+## Origin authentication
+
+Keyfront adds `X-Gateway-Secret` when forwarding to the origin. Publishers use
+this secret to reject requests that bypass the gateway.
+
+Rate-limit response headers will be documented when their wire format is fixed.

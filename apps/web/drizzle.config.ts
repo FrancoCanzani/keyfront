@@ -5,6 +5,8 @@ export default defineConfig({
   schema: "./src/server/db/schema",
   out: "./drizzle",
   dbCredentials: {
-    url: process.env.DATABASE_URL ?? "postgres://localhost/api_gateway",
+    url:
+      process.env.DATABASE_URL ??
+      `postgres://${process.env.USER ?? "postgres"}@localhost/api_gateway`,
   },
 });
