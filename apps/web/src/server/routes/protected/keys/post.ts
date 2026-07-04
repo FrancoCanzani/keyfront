@@ -44,15 +44,23 @@ export const createKey = new Hono<AppRouteEnv>().post(
     const rawKey = `gw_live_${randomBytes(24).toString("base64url")}`;
     const keyHash = createHash("sha256").update(rawKey).digest("hex");
     const prefix = rawKey.slice(0, 12);
+    const expiresAt = input.expiresAt ? new Date(input.expiresAt) : null;
 
     const [row] = await db
       .insert(apiKeys)
-      .values({ ...input, keyHash, prefix })
+      .values({
+        consumerId: input.consumerId,
+        planId: input.planId,
+        keyHash,
+        prefix,
+        expiresAt,
+      })
       .returning({
         id: apiKeys.id,
         prefix: apiKeys.prefix,
         status: apiKeys.status,
         createdAt: apiKeys.createdAt,
+        expiresAt: apiKeys.expiresAt,
       });
 
     await syncKey({
@@ -60,6 +68,8 @@ export const createKey = new Hono<AppRouteEnv>().post(
       keyId: row.id,
       serviceId: consumer.serviceId,
       planId: input.planId,
+      prefix,
+      expiresAt,
     });
 
     // the raw key is returned exactly once and never stored

@@ -8,6 +8,7 @@ import { authMiddleware } from "./middleware/auth";
 import { startUsageDrain } from "./usage-drain";
 import { consumersRoutes } from "./routes/protected/consumers";
 import { keysRoutes } from "./routes/protected/keys";
+import { logsRoutes } from "./routes/protected/logs";
 import { plansRoutes } from "./routes/protected/plans";
 import { organizationRoutes } from "./routes/protected/organization";
 import { servicesRoutes } from "./routes/protected/services";
@@ -37,7 +38,8 @@ export const apiRoutes = app
   .route("/plans", plansRoutes)
   .route("/consumers", consumersRoutes)
   .route("/keys", keysRoutes)
-  .route("/usage", usageRoutes);
+  .route("/usage", usageRoutes)
+  .route("/logs", logsRoutes);
 
 export type AppType = typeof apiRoutes;
 

@@ -25,6 +25,7 @@ export const getKeys = new Hono<AppRouteEnv>().get(
         status: apiKeys.status,
         createdAt: apiKeys.createdAt,
         lastUsedAt: apiKeys.lastUsedAt,
+        expiresAt: apiKeys.expiresAt,
         consumerId: consumers.id,
         consumerExternalRef: consumers.externalRef,
         planId: plans.id,

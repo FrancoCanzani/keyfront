@@ -55,7 +55,7 @@ export const Route = createFileRoute("/$orgId/services/$serviceId/keys")({
 });
 
 type ApiKeyRow = InferResponseType<typeof client.api.keys.$get, 200>[number];
-type IssuedKey = InferResponseType<typeof client.api.keys.$post, 201>;
+type IssuedKey = { key: string };
 
 const columnHelper = createColumnHelper<ApiKeyRow>();
 
@@ -85,14 +85,38 @@ function KeysTab() {
   });
 
   const issueKey = useMutation({
-    mutationFn: async (value: { consumerId: string; planId: string }) => {
-      const res = await client.api.keys.$post({ json: value });
+    mutationFn: async (value: {
+      consumerId: string;
+      planId: string;
+      expiresAt: string;
+    }) => {
+      const res = await client.api.keys.$post({
+        json: { ...value, expiresAt: value.expiresAt || null },
+      });
       if (!res.ok) {
         throw new Error(await readApiError(res, "Failed to issue key"));
       }
       return res.json();
     },
     onSuccess: (key) => {
+      setIssuedKey(key);
+      queryClient.invalidateQueries({ queryKey: ["keys", serviceId] });
+    },
+    onError: (error) => toast.error(error.message),
+  });
+
+  const rotateKey = useMutation({
+    mutationFn: async (id: string) => {
+      const res = await client.api.keys[":id"].rotate.$post({
+        param: { id },
+      });
+      if (!res.ok) {
+        throw new Error(await readApiError(res, "Failed to rotate key"));
+      }
+      return res.json();
+    },
+    onSuccess: (key) => {
+      toast.success("Key rotated — copy the new one now");
       setIssuedKey(key);
       queryClient.invalidateQueries({ queryKey: ["keys", serviceId] });
     },
@@ -125,7 +149,7 @@ function KeysTab() {
   });
 
   const keyForm = useForm({
-    defaultValues: { consumerId: "", planId: "" },
+    defaultValues: { consumerId: "", planId: "", expiresAt: "" },
     onSubmit: async ({ value, formApi }) => {
       await issueKey.mutateAsync(value);
       formApi.reset();
@@ -177,36 +201,87 @@ function KeysTab() {
         </span>
       ),
     }),
+    columnHelper.accessor("expiresAt", {
+      header: () => <span className="px-2">Expires</span>,
+      cell: (info) => {
+        const value = info.getValue();
+        if (!value) {
+          return <span className="px-2 text-xs text-muted-foreground">Never</span>;
+        }
+        const expired = new Date(value as string).getTime() < Date.now();
+        return (
+          <span
+            className={
+              expired
+                ? "px-2 font-mono text-xs font-medium text-[#d03b3b] tabular-nums"
+                : "px-2 font-mono text-xs text-muted-foreground tabular-nums"
+            }
+          >
+            {expired ? "Expired " : ""}
+            {new Date(value as string).toLocaleDateString()}
+          </span>
+        );
+      },
+    }),
     columnHelper.display({
       id: "actions",
       cell: (info) =>
         info.row.original.status === "active" ? (
-          <AlertDialog>
-            <AlertDialogTrigger asChild>
-              <Button variant="ghost" size="sm" disabled={revokeKey.isPending}>
-                Revoke
-              </Button>
-            </AlertDialogTrigger>
-            <AlertDialogContent>
-              <AlertDialogHeader>
-                <AlertDialogTitle>
-                  Revoke {info.row.original.prefix}…?
-                </AlertDialogTitle>
-                <AlertDialogDescription>
-                  Requests with this key start failing within the gateway's
-                  cache TTL. This can't be undone.
-                </AlertDialogDescription>
-              </AlertDialogHeader>
-              <AlertDialogFooter>
-                <AlertDialogCancel>Cancel</AlertDialogCancel>
-                <AlertDialogAction
-                  onClick={() => revokeKey.mutate(info.row.original.id)}
-                >
-                  Revoke key
-                </AlertDialogAction>
-              </AlertDialogFooter>
-            </AlertDialogContent>
-          </AlertDialog>
+          <div className="flex justify-end gap-1">
+            <AlertDialog>
+              <AlertDialogTrigger asChild>
+                <Button variant="ghost" size="sm" disabled={rotateKey.isPending}>
+                  Rotate
+                </Button>
+              </AlertDialogTrigger>
+              <AlertDialogContent>
+                <AlertDialogHeader>
+                  <AlertDialogTitle>
+                    Rotate {info.row.original.prefix}…?
+                  </AlertDialogTitle>
+                  <AlertDialogDescription>
+                    A new key is issued with the same consumer, plan and
+                    expiry. The old key stops working within seconds — make
+                    sure whoever uses it is ready to swap.
+                  </AlertDialogDescription>
+                </AlertDialogHeader>
+                <AlertDialogFooter>
+                  <AlertDialogCancel>Cancel</AlertDialogCancel>
+                  <AlertDialogAction
+                    onClick={() => rotateKey.mutate(info.row.original.id)}
+                  >
+                    Rotate key
+                  </AlertDialogAction>
+                </AlertDialogFooter>
+              </AlertDialogContent>
+            </AlertDialog>
+            <AlertDialog>
+              <AlertDialogTrigger asChild>
+                <Button variant="ghost" size="sm" disabled={revokeKey.isPending}>
+                  Revoke
+                </Button>
+              </AlertDialogTrigger>
+              <AlertDialogContent>
+                <AlertDialogHeader>
+                  <AlertDialogTitle>
+                    Revoke {info.row.original.prefix}…?
+                  </AlertDialogTitle>
+                  <AlertDialogDescription>
+                    Requests with this key start failing within the gateway's
+                    cache TTL. This can't be undone.
+                  </AlertDialogDescription>
+                </AlertDialogHeader>
+                <AlertDialogFooter>
+                  <AlertDialogCancel>Cancel</AlertDialogCancel>
+                  <AlertDialogAction
+                    onClick={() => revokeKey.mutate(info.row.original.id)}
+                  >
+                    Revoke key
+                  </AlertDialogAction>
+                </AlertDialogFooter>
+              </AlertDialogContent>
+            </AlertDialog>
+          </div>
         ) : null,
     }),
   ];
@@ -359,6 +434,23 @@ function KeysTab() {
                       ))}
                     </SelectContent>
                   </Select>
+                </FormFieldGroup>
+              )}
+            </keyForm.Field>
+            <keyForm.Field name="expiresAt">
+              {(field) => (
+                <FormFieldGroup className="min-w-0 sm:max-w-40">
+                  <FormFieldLabel htmlFor={field.name}>
+                    Expires (optional)
+                  </FormFieldLabel>
+                  <Input
+                    id={field.name}
+                    type="date"
+                    className={controlClassName}
+                    value={field.state.value}
+                    min={new Date().toISOString().slice(0, 10)}
+                    onChange={(e) => field.handleChange(e.target.value)}
+                  />
                 </FormFieldGroup>
               )}
             </keyForm.Field>

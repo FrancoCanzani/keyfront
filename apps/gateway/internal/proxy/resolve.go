@@ -24,6 +24,8 @@ type Key struct {
 	KeyID     string `json:"keyId"`
 	ServiceID string `json:"serviceId"`
 	PlanID    string `json:"planId"`
+	Prefix    string `json:"prefix"`
+	ExpiresAt *int64 `json:"expiresAt"`
 }
 
 type Plan struct {

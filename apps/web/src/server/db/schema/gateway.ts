@@ -89,6 +89,7 @@ export const apiKeys = pgTable(
     status: text("status").notNull().default("active"),
     createdAt: timestamp("created_at").notNull().defaultNow(),
     lastUsedAt: timestamp("last_used_at"),
+    expiresAt: timestamp("expires_at"),
   },
   (t) => [index("api_keys_consumer_id_idx").on(t.consumerId)],
 );

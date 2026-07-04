@@ -29,6 +29,17 @@ export const usageQuery = (serviceId: string, range: "24h" | "7d" | "30d") =>
     refetchInterval: 30_000,
   });
 
+export const logsQuery = (serviceId: string) =>
+  queryOptions({
+    queryKey: ["logs", serviceId],
+    queryFn: async () => {
+      const res = await client.api.logs.$get({ query: { serviceId } });
+      if (!res.ok) throw new Error("Failed to load recent requests");
+      return res.json();
+    },
+    refetchInterval: 10_000,
+  });
+
 export const servicesQuery = queryOptions({
   queryKey: ["services"],
   queryFn: async () => {

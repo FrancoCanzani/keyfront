@@ -62,81 +62,106 @@ func (p *Proxy) Handle(w http.ResponseWriter, r *http.Request) {
 			http.Error(w, "unknown host", http.StatusNotFound)
 			return
 		}
-		route = Route{OriginURL: origin}
+		p.forward(w, r, origin)
+		return
 	}
 
-	// static-map routes have no service and therefore no keys — dev only
-	if route.ServiceID != "" {
-		token, ok := bearerToken(r)
-		if !ok {
-			http.Error(w, "missing api key", http.StatusUnauthorized)
-			return
-		}
+	p.handleKeyed(ctx, w, r, route)
+}
 
-		key, found, err := lookup[Key](ctx, p.rdb, p.keys, "key:"+hashKey(token))
-		if err != nil {
-			log.Printf("resolve key: %v", err)
-			http.Error(w, "upstream lookup failed", http.StatusBadGateway)
-			return
-		}
-		if !found || key.ServiceID != route.ServiceID {
-			http.Error(w, "invalid api key", http.StatusUnauthorized)
-			return
-		}
+func (p *Proxy) handleKeyed(ctx context.Context, w http.ResponseWriter, r *http.Request, route Route) {
+	start := time.Now()
+	entry := logEntry{
+		TS:        start.UnixMilli(),
+		KeyPrefix: "-",
+		Method:    r.Method,
+		Path:      r.URL.Path,
+	}
+	defer func() {
+		entry.LatencyMS = time.Since(start).Milliseconds()
+		p.recordLog(route.ServiceID, entry)
+	}()
 
-		plan, found, err := lookup[Plan](ctx, p.rdb, p.plans, "plan:"+key.PlanID)
-		if err != nil || !found {
-			// a key without its plan means the sync is broken — resync heals it
-			log.Printf("plan %s missing for key %s: %v", key.PlanID, key.KeyID, err)
-			http.Error(w, "upstream lookup failed", http.StatusBadGateway)
-			return
-		}
+	reject := func(code int, msg string) {
+		entry.Status = code
+		http.Error(w, msg, code)
+	}
 
-		status, err := p.billingStatus(ctx, route.OrganizationID)
-		if err != nil {
-			log.Printf("billing %s: %v", route.OrganizationID, err)
-			http.Error(w, "upstream lookup failed", http.StatusBadGateway)
-			return
-		}
-		if status != "active" {
-			http.Error(w, "publisher subscription inactive", http.StatusPaymentRequired)
-			return
-		}
+	token, ok := bearerToken(r)
+	if !ok {
+		reject(http.StatusUnauthorized, "missing api key")
+		return
+	}
 
-		rl := p.allow(ctx, key.KeyID, plan)
-		w.Header().Set("X-RateLimit-Limit", strconv.Itoa(plan.RPS))
-		w.Header().Set("X-RateLimit-Remaining", strconv.Itoa(rl.remaining))
-		if rl.quotaExceeded {
-			http.Error(w, "monthly quota exceeded", http.StatusTooManyRequests)
-			return
-		}
-		if !rl.allowed {
-			w.Header().Set("Retry-After", "1")
-			http.Error(w, "rate limit exceeded", http.StatusTooManyRequests)
-			return
-		}
+	key, found, err := lookup[Key](ctx, p.rdb, p.keys, "key:"+hashKey(token))
+	if err != nil {
+		log.Printf("resolve key: %v", err)
+		reject(http.StatusBadGateway, "upstream lookup failed")
+		return
+	}
+	if !found || key.ServiceID != route.ServiceID {
+		reject(http.StatusUnauthorized, "invalid api key")
+		return
+	}
+	entry.KeyPrefix = key.Prefix
+	if key.ExpiresAt != nil && time.Now().UnixMilli() > *key.ExpiresAt {
+		reject(http.StatusUnauthorized, "invalid api key")
+		return
+	}
 
-		target, err := url.Parse(route.OriginURL)
-		if err != nil {
-			http.Error(w, "bad origin", http.StatusInternalServerError)
-			return
-		}
+	plan, found, err := lookup[Plan](ctx, p.rdb, p.plans, "plan:"+key.PlanID)
+	if err != nil || !found {
+		// a key without its plan means the sync is broken — resync heals it
+		log.Printf("plan %s missing for key %s: %v", key.PlanID, key.KeyID, err)
+		reject(http.StatusBadGateway, "upstream lookup failed")
+		return
+	}
 
-		r.Header.Del("Authorization")
-		r.Header.Set("X-Gateway-Secret", p.cfg.GatewaySecret)
+	status, err := p.billingStatus(ctx, route.OrganizationID)
+	if err != nil {
+		log.Printf("billing %s: %v", route.OrganizationID, err)
+		reject(http.StatusBadGateway, "upstream lookup failed")
+		return
+	}
+	if status != "active" {
+		reject(http.StatusPaymentRequired, "publisher subscription inactive")
+		return
+	}
 
-		rec := &statusRecorder{ResponseWriter: w, status: http.StatusOK}
-		start := time.Now()
-		httputil.NewSingleHostReverseProxy(target).ServeHTTP(rec, r)
-		p.recordUsage(key.KeyID, rec.status, time.Since(start))
+	rl := p.allow(ctx, key.KeyID, plan)
+	w.Header().Set("X-RateLimit-Limit", strconv.Itoa(plan.RPS))
+	w.Header().Set("X-RateLimit-Remaining", strconv.Itoa(rl.remaining))
+	if rl.quotaExceeded {
+		reject(http.StatusTooManyRequests, "monthly quota exceeded")
+		return
+	}
+	if !rl.allowed {
+		w.Header().Set("Retry-After", "1")
+		reject(http.StatusTooManyRequests, "rate limit exceeded")
 		return
 	}
 
 	target, err := url.Parse(route.OriginURL)
 	if err != nil {
-		http.Error(w, "bad origin", http.StatusInternalServerError)
+		reject(http.StatusInternalServerError, "bad origin")
 		return
 	}
 
+	r.Header.Del("Authorization")
+	r.Header.Set("X-Gateway-Secret", p.cfg.GatewaySecret)
+
+	rec := &statusRecorder{ResponseWriter: w, status: http.StatusOK}
+	proxyStart := time.Now()
+	httputil.NewSingleHostReverseProxy(target).ServeHTTP(rec, r)
+	entry.Status = rec.status
+	p.recordUsage(key.KeyID, rec.status, time.Since(proxyStart))
+}
+
+func (p *Proxy) forward(w http.ResponseWriter, r *http.Request, origin string) {
+	target, err := url.Parse(origin)
+	if err != nil {
+		http.Error(w, "bad origin", http.StatusInternalServerError)
+		return
+	}
 	httputil.NewSingleHostReverseProxy(target).ServeHTTP(w, r)
 }

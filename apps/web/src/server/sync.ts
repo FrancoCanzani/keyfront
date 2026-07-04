@@ -22,6 +22,8 @@ type KeyInput = {
   keyId: string;
   serviceId: string;
   planId: string;
+  prefix: string;
+  expiresAt: Date | null;
 };
 
 function safe(op: string, promise: Promise<unknown>) {
@@ -68,6 +70,8 @@ export function syncKey(key: KeyInput) {
         keyId: key.keyId,
         serviceId: key.serviceId,
         planId: key.planId,
+        prefix: key.prefix,
+        expiresAt: key.expiresAt ? key.expiresAt.getTime() : null,
       }),
     ),
   );

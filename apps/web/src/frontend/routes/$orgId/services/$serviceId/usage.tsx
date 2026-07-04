@@ -19,7 +19,7 @@ import {
 } from "@/components/ui/chart";
 import { DataTable } from "@/components/ui/data-table";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { usageQuery } from "@/lib/gateway-queries";
+import { logsQuery, usageQuery } from "@/lib/gateway-queries";
 import type { client } from "@/lib/rpc";
 
 const searchSchema = z.object({
@@ -30,9 +30,12 @@ export const Route = createFileRoute("/$orgId/services/$serviceId/usage")({
   validateSearch: searchSchema,
   loaderDeps: ({ search }) => ({ range: search.range }),
   loader: ({ context, params, deps }) =>
-    context.queryClient.ensureQueryData(
-      usageQuery(params.serviceId, deps.range),
-    ),
+    Promise.all([
+      context.queryClient.ensureQueryData(
+        usageQuery(params.serviceId, deps.range),
+      ),
+      context.queryClient.ensureQueryData(logsQuery(params.serviceId)),
+    ]),
   component: UsageTab,
 });
 
@@ -234,7 +237,97 @@ function UsageTab() {
           <DataTable table={table} />
         )}
       </section>
+
+      <RecentRequests serviceId={serviceId} />
     </div>
+  );
+}
+
+type LogEntry = InferResponseType<typeof client.api.logs.$get, 200>[number];
+
+const logColumnHelper = createColumnHelper<LogEntry>();
+
+const statusClassName = (status: number) =>
+  status >= 500
+    ? "text-[#d03b3b]"
+    : status >= 400
+      ? "text-[#ec835a]"
+      : "text-[#0ca30c]";
+
+const logColumns = [
+  logColumnHelper.accessor("ts", {
+    header: () => <span className="px-2">Time</span>,
+    cell: (info) => (
+      <span className="px-2 font-mono text-xs text-muted-foreground tabular-nums">
+        {new Date(info.getValue()).toLocaleTimeString()}
+      </span>
+    ),
+  }),
+  logColumnHelper.accessor("method", {
+    header: () => <span className="px-2">Method</span>,
+    cell: (info) => <code className="px-2 text-xs">{info.getValue()}</code>,
+  }),
+  logColumnHelper.accessor("path", {
+    header: () => <span className="px-2">Path</span>,
+    cell: (info) => (
+      <code className="block max-w-56 truncate px-2 text-xs">
+        {info.getValue()}
+      </code>
+    ),
+  }),
+  logColumnHelper.accessor("status", {
+    header: () => <span className="px-2">Status</span>,
+    cell: (info) => (
+      <span
+        className={`px-2 font-mono text-xs font-medium tabular-nums ${statusClassName(info.getValue())}`}
+      >
+        {info.getValue()}
+      </span>
+    ),
+  }),
+  logColumnHelper.accessor("ms", {
+    header: () => <span className="px-2">Latency</span>,
+    cell: (info) => (
+      <span className="px-2 font-mono text-xs text-muted-foreground tabular-nums">
+        {info.getValue()} ms
+      </span>
+    ),
+  }),
+  logColumnHelper.accessor("keyPrefix", {
+    header: () => <span className="px-2">Key</span>,
+    cell: (info) => (
+      <code className="px-2 text-xs text-muted-foreground">
+        {info.getValue() === "-" ? "—" : `${info.getValue()}…`}
+      </code>
+    ),
+  }),
+];
+
+function RecentRequests({ serviceId }: { serviceId: string }) {
+  const { data: logs } = useSuspenseQuery(logsQuery(serviceId));
+
+  const table = useReactTable({
+    data: logs,
+    columns: logColumns,
+    getCoreRowModel: getCoreRowModel(),
+  });
+
+  return (
+    <section className="space-y-2">
+      <div className="flex items-baseline justify-between">
+        <h2 className="text-sm font-medium">Recent requests</h2>
+        <span className="text-xs text-muted-foreground">
+          Last {logs.length} · includes gateway rejections · live
+        </span>
+      </div>
+      {logs.length === 0 ? (
+        <div className="rounded-md border border-dashed p-6 text-center text-sm text-muted-foreground">
+          Nothing yet — requests appear here the moment they hit the gateway.
+        </div>
+      ) : (
+        <DataTable table={table} />
+      )}
+    </section>
   );
 }
 

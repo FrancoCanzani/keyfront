@@ -21,6 +21,8 @@ const keyRows = await db
     keyHash: apiKeys.keyHash,
     keyId: apiKeys.id,
     planId: apiKeys.planId,
+    prefix: apiKeys.prefix,
+    expiresAt: apiKeys.expiresAt,
     serviceId: consumers.serviceId,
   })
   .from(apiKeys)
@@ -51,7 +53,13 @@ for (const p of planRows) {
 for (const k of keyRows) {
   pipeline.set(
     `key:${k.keyHash}`,
-    JSON.stringify({ keyId: k.keyId, serviceId: k.serviceId, planId: k.planId }),
+    JSON.stringify({
+      keyId: k.keyId,
+      serviceId: k.serviceId,
+      planId: k.planId,
+      prefix: k.prefix,
+      expiresAt: k.expiresAt ? k.expiresAt.getTime() : null,
+    }),
   );
 }
 await pipeline.exec();
