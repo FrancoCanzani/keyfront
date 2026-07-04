@@ -11,6 +11,7 @@ import { keysRoutes } from "./routes/protected/keys";
 import { plansRoutes } from "./routes/protected/plans";
 import { organizationRoutes } from "./routes/protected/organization";
 import { servicesRoutes } from "./routes/protected/services";
+import { usageRoutes } from "./routes/protected/usage";
 import type { AppRouteEnv } from "./types";
 
 const app = new Hono<AppRouteEnv>();
@@ -35,7 +36,8 @@ export const apiRoutes = app
   .route("/services", servicesRoutes)
   .route("/plans", plansRoutes)
   .route("/consumers", consumersRoutes)
-  .route("/keys", keysRoutes);
+  .route("/keys", keysRoutes)
+  .route("/usage", usageRoutes);
 
 export type AppType = typeof apiRoutes;
 

@@ -8,6 +8,7 @@ const TABS = [
   { value: "settings", label: "Settings", to: "/$orgId/services/$serviceId/settings" as const },
   { value: "plans", label: "Plans", to: "/$orgId/services/$serviceId/plans" as const },
   { value: "keys", label: "Consumers & keys", to: "/$orgId/services/$serviceId/keys" as const },
+  { value: "usage", label: "Usage", to: "/$orgId/services/$serviceId/usage" as const },
 ] as const;
 
 function useServiceTab() {
@@ -18,6 +19,7 @@ function useServiceTab() {
   if (pathname.endsWith("/settings")) return "settings";
   if (pathname.endsWith("/plans")) return "plans";
   if (pathname.endsWith("/keys")) return "keys";
+  if (pathname.endsWith("/usage")) return "usage";
   return "overview";
 }
 

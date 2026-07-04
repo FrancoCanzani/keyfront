@@ -17,6 +17,18 @@ export const orgInfoQuery = (orgId: string) =>
     retry: false,
   });
 
+export const usageQuery = (serviceId: string, range: "24h" | "7d" | "30d") =>
+  queryOptions({
+    queryKey: ["usage", serviceId, range],
+    queryFn: async () => {
+      const res = await client.api.usage.$get({ query: { serviceId, range } });
+      if (!res.ok) throw new Error("Failed to load usage");
+      return res.json();
+    },
+    // drain flushes every 30s; keep the page as fresh as the data can be
+    refetchInterval: 30_000,
+  });
+
 export const servicesQuery = queryOptions({
   queryKey: ["services"],
   queryFn: async () => {
