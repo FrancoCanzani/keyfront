@@ -6,6 +6,7 @@ const TABS = [
   { value: "plans", label: "Plans", to: "/$orgId/services/$serviceId/plans" as const },
   { value: "keys", label: "Consumers & keys", to: "/$orgId/services/$serviceId/keys" as const },
   { value: "usage", label: "Usage", to: "/$orgId/services/$serviceId/usage" as const },
+  { value: "logs", label: "Logs", to: "/$orgId/services/$serviceId/logs" as const },
   { value: "settings", label: "Settings", to: "/$orgId/services/$serviceId/settings" as const },
 ] as const;
 

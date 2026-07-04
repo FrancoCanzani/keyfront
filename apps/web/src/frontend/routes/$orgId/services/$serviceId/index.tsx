@@ -1,6 +1,7 @@
 import { ServiceOverviewPage } from "@/features/services/service-overview";
 import {
   logsQuery,
+  plansQuery,
   serviceQuery,
   usageQuery,
 } from "@/lib/gateway-queries";
@@ -12,6 +13,7 @@ export const Route = createFileRoute("/$orgId/services/$serviceId/")({
       context.queryClient.ensureQueryData(serviceQuery(params.serviceId)),
       context.queryClient.ensureQueryData(usageQuery(params.serviceId, "7d")),
       context.queryClient.ensureQueryData(logsQuery(params.serviceId)),
+      context.queryClient.ensureQueryData(plansQuery(params.serviceId)),
     ]),
   component: ServiceOverviewPage,
 });

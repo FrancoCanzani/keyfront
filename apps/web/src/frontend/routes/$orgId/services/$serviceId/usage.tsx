@@ -1,5 +1,5 @@
 import { ServiceUsagePage } from "@/features/services/service-usage";
-import { logsQuery, usageQuery } from "@/lib/gateway-queries";
+import { usageQuery } from "@/lib/gateway-queries";
 import { createFileRoute } from "@tanstack/react-router";
 import { z } from "zod";
 
@@ -11,11 +11,8 @@ export const Route = createFileRoute("/$orgId/services/$serviceId/usage")({
   validateSearch: searchSchema,
   loaderDeps: ({ search }) => ({ range: search.range }),
   loader: ({ context, params, deps }) =>
-    Promise.all([
-      context.queryClient.ensureQueryData(
-        usageQuery(params.serviceId, deps.range),
-      ),
-      context.queryClient.ensureQueryData(logsQuery(params.serviceId)),
-    ]),
+    context.queryClient.ensureQueryData(
+      usageQuery(params.serviceId, deps.range),
+    ),
   component: ServiceUsagePage,
 });

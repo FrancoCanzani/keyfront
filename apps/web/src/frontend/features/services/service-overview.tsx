@@ -1,3 +1,5 @@
+import { CheckCircle2Icon, CircleIcon } from "lucide-react";
+import { toast } from "sonner";
 import { FormSection } from "@/components/form-layout";
 import { Button } from "@/components/ui/button";
 import {
@@ -6,21 +8,26 @@ import {
   EmptyHeader,
 } from "@/components/ui/empty";
 import {
-  gatewayDomain,
+  GatewaySnippets,
+  gatewayUrl,
+} from "@/features/services/gateway-snippets";
+import {
   logsQuery,
+  plansQuery,
   serviceQuery,
   usageQuery,
 } from "@/lib/gateway-queries";
 import { useSuspenseQuery } from "@tanstack/react-query";
-import { getRouteApi } from "@tanstack/react-router";
+import { getRouteApi, Link } from "@tanstack/react-router";
 
 const route = getRouteApi("/$orgId/services/$serviceId/");
 
 export function ServiceOverviewPage() {
-  const { serviceId } = route.useParams();
+  const { orgId, serviceId } = route.useParams();
   const { data: service } = useSuspenseQuery(serviceQuery(serviceId));
   const { data: usage } = useSuspenseQuery(usageQuery(serviceId, "7d"));
   const { data: logs } = useSuspenseQuery(logsQuery(serviceId));
+  const { data: plans } = useSuspenseQuery(plansQuery(serviceId));
 
   const totals = usage.series.reduce(
     (result, point) => ({
@@ -37,7 +44,29 @@ export function ServiceOverviewPage() {
     totals.count > 0 ? totals.latencyMsSum / totals.count : null;
   const activeKeys = usage.keys.filter((key) => key.status === "active").length;
   const failures = logs.filter((entry) => entry.status >= 400).slice(0, 5);
-  const curl = `curl -H "Authorization: Bearer $API_KEY" http://${service.hostKey}.${gatewayDomain}/`;
+  const url = gatewayUrl(service.hostKey);
+
+  const steps = [
+    {
+      label: "Create a plan",
+      description: "Rate limits and quotas for keys.",
+      done: plans.length > 0,
+      to: "/$orgId/services/$serviceId/plans" as const,
+    },
+    {
+      label: "Issue a key",
+      description: "Add a consumer and give them a key.",
+      done: usage.keys.length > 0,
+      to: "/$orgId/services/$serviceId/keys" as const,
+    },
+    {
+      label: "Send your first request",
+      description: "Use the snippet below with your key.",
+      done: totals.count > 0,
+      to: null,
+    },
+  ];
+  const setupDone = steps.every((step) => step.done);
 
   return (
     <div className="grid gap-10">
@@ -59,6 +88,74 @@ export function ServiceOverviewPage() {
           />
           <Metric label="Active keys" value={activeKeys.toLocaleString()} />
         </div>
+      </FormSection>
+
+      {setupDone ? null : (
+        <FormSection
+          title="Next steps"
+          description="Finish these to put traffic through the gateway."
+        >
+          <div className="max-w-2xl overflow-hidden rounded-md border">
+            {steps.map((step) => (
+              <div
+                key={step.label}
+                className="flex items-center gap-3 border-b px-3 py-2.5 last:border-0"
+              >
+                {step.done ? (
+                  <CheckCircle2Icon className="size-4 shrink-0 text-green-700" />
+                ) : (
+                  <CircleIcon className="size-4 shrink-0 text-muted-foreground" />
+                )}
+                <div className="min-w-0 flex-1">
+                  {step.to && !step.done ? (
+                    <Link
+                      to={step.to}
+                      params={{ orgId, serviceId }}
+                      className="text-sm font-medium underline-offset-4 hover:underline"
+                    >
+                      {step.label}
+                    </Link>
+                  ) : (
+                    <p
+                      className={
+                        step.done
+                          ? "text-sm font-medium text-muted-foreground line-through"
+                          : "text-sm font-medium"
+                      }
+                    >
+                      {step.label}
+                    </p>
+                  )}
+                  <p className="text-xs text-muted-foreground">
+                    {step.description}
+                  </p>
+                </div>
+              </div>
+            ))}
+          </div>
+        </FormSection>
+      )}
+
+      <FormSection
+        title="Your gateway endpoint"
+        description="Authenticated requests to this URL are forwarded to your origin."
+      >
+        <div className="flex max-w-2xl items-center gap-2">
+          <code className="flex-1 overflow-x-auto rounded-lg border bg-muted/40 px-3 py-2 font-mono text-xs tabular-nums">
+            {url}
+          </code>
+          <Button
+            variant="outline"
+            className="h-8 shrink-0"
+            onClick={() => {
+              navigator.clipboard.writeText(url);
+              toast.success("Copied to clipboard");
+            }}
+          >
+            Copy
+          </Button>
+        </div>
+        <GatewaySnippets hostKey={service.hostKey} />
       </FormSection>
 
       <FormSection
@@ -103,24 +200,6 @@ export function ServiceOverviewPage() {
             ))}
           </div>
         )}
-      </FormSection>
-
-      <FormSection
-        title="Try it"
-        description="Issue a key on the Keys tab, then requests to the gateway URL are forwarded to your origin."
-      >
-        <div className="flex max-w-2xl items-center gap-2">
-          <code className="flex-1 overflow-x-auto rounded-lg border bg-muted/40 px-3 py-2 font-mono text-xs tabular-nums">
-            {curl}
-          </code>
-          <Button
-            variant="outline"
-            className="h-8 shrink-0"
-            onClick={() => navigator.clipboard.writeText(curl)}
-          >
-            Copy
-          </Button>
-        </div>
       </FormSection>
     </div>
   );

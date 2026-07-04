@@ -6,7 +6,7 @@ import {
   useReactTable,
 } from "@tanstack/react-table";
 import type { InferResponseType } from "hono/client";
-import { Bar, BarChart, CartesianGrid, XAxis, YAxis } from "recharts";
+import { Bar, BarChart, CartesianGrid, Line, LineChart, XAxis, YAxis } from "recharts";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
   ChartContainer,
@@ -24,7 +24,7 @@ import {
   EmptyTitle,
 } from "@/components/ui/empty";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { logsQuery, usageQuery } from "@/lib/gateway-queries";
+import { usageQuery } from "@/lib/gateway-queries";
 import type { client } from "@/lib/rpc";
 
 const route = getRouteApi("/$orgId/services/$serviceId/usage");
@@ -37,6 +37,7 @@ const chartConfig = {
   ok: { label: "2xx/3xx", color: "#0ca30c" },
   err4: { label: "4xx", color: "#ec835a" },
   err5: { label: "5xx", color: "#d03b3b" },
+  avgMs: { label: "Avg latency", color: "#3b82f6" },
 } satisfies ChartConfig;
 
 const columnHelper = createColumnHelper<KeyRow>();
@@ -127,6 +128,7 @@ export function ServiceUsagePage() {
 
   const series = data.series.map((b) => ({
     ...b,
+    avgMs: b.count > 0 ? Math.round(b.latencyMsSum / b.count) : 0,
     label:
       range === "24h"
         ? new Date(b.bucket).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })
@@ -189,37 +191,73 @@ export function ServiceUsagePage() {
           </EmptyHeader>
         </Empty>
       ) : (
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-sm font-medium">
-              Requests by status
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <ChartContainer config={chartConfig} className="h-56 w-full">
-              <BarChart data={series}>
-                <CartesianGrid vertical={false} strokeOpacity={0.4} />
-                <XAxis
-                  dataKey="label"
-                  tickLine={false}
-                  axisLine={false}
-                  tickMargin={8}
-                />
-                <YAxis tickLine={false} axisLine={false} width={40} allowDecimals={false} />
-                <ChartTooltip content={<ChartTooltipContent />} />
-                <ChartLegend content={<ChartLegendContent />} />
-                <Bar dataKey="ok" stackId="status" fill="var(--color-ok)" />
-                <Bar dataKey="err4" stackId="status" fill="var(--color-err4)" />
-                <Bar
-                  dataKey="err5"
-                  stackId="status"
-                  fill="var(--color-err5)"
-                  radius={[2, 2, 0, 0]}
-                />
-              </BarChart>
-            </ChartContainer>
-          </CardContent>
-        </Card>
+        <div className="grid gap-4 xl:grid-cols-2">
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-sm font-medium">
+                Requests by status
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <ChartContainer config={chartConfig} className="h-56 w-full">
+                <BarChart data={series}>
+                  <CartesianGrid vertical={false} strokeOpacity={0.4} />
+                  <XAxis
+                    dataKey="label"
+                    tickLine={false}
+                    axisLine={false}
+                    tickMargin={8}
+                  />
+                  <YAxis tickLine={false} axisLine={false} width={40} allowDecimals={false} />
+                  <ChartTooltip content={<ChartTooltipContent />} />
+                  <ChartLegend content={<ChartLegendContent />} />
+                  <Bar dataKey="ok" stackId="status" fill="var(--color-ok)" />
+                  <Bar dataKey="err4" stackId="status" fill="var(--color-err4)" />
+                  <Bar
+                    dataKey="err5"
+                    stackId="status"
+                    fill="var(--color-err5)"
+                    radius={[2, 2, 0, 0]}
+                  />
+                </BarChart>
+              </ChartContainer>
+            </CardContent>
+          </Card>
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-sm font-medium">
+                Average latency
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <ChartContainer config={chartConfig} className="h-56 w-full">
+                <LineChart data={series}>
+                  <CartesianGrid vertical={false} strokeOpacity={0.4} />
+                  <XAxis
+                    dataKey="label"
+                    tickLine={false}
+                    axisLine={false}
+                    tickMargin={8}
+                  />
+                  <YAxis
+                    tickLine={false}
+                    axisLine={false}
+                    width={40}
+                    allowDecimals={false}
+                    unit="ms"
+                  />
+                  <ChartTooltip content={<ChartTooltipContent />} />
+                  <Line
+                    dataKey="avgMs"
+                    stroke="var(--color-avgMs)"
+                    strokeWidth={1.5}
+                    dot={false}
+                  />
+                </LineChart>
+              </ChartContainer>
+            </CardContent>
+          </Card>
+        </div>
       )}
 
       <section className="space-y-2">
@@ -236,102 +274,7 @@ export function ServiceUsagePage() {
           <DataTable table={table} />
         )}
       </section>
-
-      <RecentRequests serviceId={serviceId} />
     </div>
-  );
-}
-
-type LogEntry = InferResponseType<typeof client.api.logs.$get, 200>[number];
-
-const logColumnHelper = createColumnHelper<LogEntry>();
-
-const statusClassName = (status: number) =>
-  status >= 500
-    ? "text-[#d03b3b]"
-    : status >= 400
-      ? "text-[#ec835a]"
-      : "text-[#0ca30c]";
-
-const logColumns = [
-  logColumnHelper.accessor("ts", {
-    header: () => <span className="px-2">Time</span>,
-    cell: (info) => (
-      <span className="px-2 font-mono text-xs text-muted-foreground tabular-nums">
-        {new Date(info.getValue()).toLocaleTimeString()}
-      </span>
-    ),
-  }),
-  logColumnHelper.accessor("method", {
-    header: () => <span className="px-2">Method</span>,
-    cell: (info) => <code className="px-2 text-xs">{info.getValue()}</code>,
-  }),
-  logColumnHelper.accessor("path", {
-    header: () => <span className="px-2">Path</span>,
-    cell: (info) => (
-      <code className="block max-w-56 truncate px-2 text-xs">
-        {info.getValue()}
-      </code>
-    ),
-  }),
-  logColumnHelper.accessor("status", {
-    header: () => <span className="px-2">Status</span>,
-    cell: (info) => (
-      <span
-        className={`px-2 font-mono text-xs font-medium tabular-nums ${statusClassName(info.getValue())}`}
-      >
-        {info.getValue()}
-      </span>
-    ),
-  }),
-  logColumnHelper.accessor("ms", {
-    header: () => <span className="px-2">Latency</span>,
-    cell: (info) => (
-      <span className="px-2 font-mono text-xs text-muted-foreground tabular-nums">
-        {info.getValue()} ms
-      </span>
-    ),
-  }),
-  logColumnHelper.accessor("keyPrefix", {
-    header: () => <span className="px-2">Key</span>,
-    cell: (info) => (
-      <code className="px-2 text-xs text-muted-foreground">
-        {info.getValue() === "-" ? "—" : `${info.getValue()}…`}
-      </code>
-    ),
-  }),
-];
-
-function RecentRequests({ serviceId }: { serviceId: string }) {
-  const { data: logs } = useSuspenseQuery(logsQuery(serviceId));
-
-  const table = useReactTable({
-    data: logs,
-    columns: logColumns,
-    getCoreRowModel: getCoreRowModel(),
-  });
-
-  return (
-    <section className="space-y-2">
-      <div className="flex items-baseline justify-between">
-        <h2 className="text-sm font-medium">Recent requests</h2>
-        <span className="text-xs text-muted-foreground">
-          Last {logs.length} · includes gateway rejections · live
-        </span>
-      </div>
-      {logs.length === 0 ? (
-        <Empty className="p-6 md:p-6">
-          <EmptyHeader>
-            <EmptyDescription>
-              Nothing yet. Requests appear here the moment they hit the
-              gateway.
-            </EmptyDescription>
-          </EmptyHeader>
-        </Empty>
-      ) : (
-        <DataTable table={table} />
-      )}
-    </section>
   );
 }
 
