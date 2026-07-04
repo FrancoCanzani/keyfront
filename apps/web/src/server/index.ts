@@ -5,6 +5,10 @@ import { HTTPException } from "hono/http-exception";
 import { auth } from "./auth";
 import { checkDb } from "./db";
 import { authMiddleware } from "./middleware/auth";
+import { consumersRoutes } from "./routes/protected/consumers";
+import { keysRoutes } from "./routes/protected/keys";
+import { plansRoutes } from "./routes/protected/plans";
+import { servicesRoutes } from "./routes/protected/services";
 import type { AppRouteEnv } from "./types";
 
 const app = new Hono<AppRouteEnv>();
@@ -24,7 +28,11 @@ app.on(["POST", "GET"], "/api/auth/*", (c) => auth.handler(c.req.raw));
 
 export const apiRoutes = app
   .basePath("/api")
-  .get("/health", async (c) => c.json({ ok: await checkDb() }));
+  .get("/health", async (c) => c.json({ ok: await checkDb() }))
+  .route("/services", servicesRoutes)
+  .route("/plans", plansRoutes)
+  .route("/consumers", consumersRoutes)
+  .route("/keys", keysRoutes);
 
 export type AppType = typeof apiRoutes;
 

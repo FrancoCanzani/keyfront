@@ -33,3 +33,12 @@ export function getUser(c: Context<AppRouteEnv>) {
   }
   return user;
 }
+
+export function getOrganizationId(c: Context<AppRouteEnv>) {
+  getUser(c);
+  const organizationId = c.get("organizationId");
+  if (!organizationId) {
+    throw new HTTPException(400, { message: "No active organization" });
+  }
+  return organizationId;
+}

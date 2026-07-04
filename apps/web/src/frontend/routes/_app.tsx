@@ -1,6 +1,11 @@
 import { createFileRoute, Navigate, Outlet } from "@tanstack/react-router";
 import { useSession, signOut } from "@/lib/auth-client";
-import { Button } from "@/components/ui/button";
+import { AppSidebar } from "@/components/app-sidebar";
+import {
+  SidebarInset,
+  SidebarProvider,
+  SidebarTrigger,
+} from "@/components/ui/sidebar";
 
 export const Route = createFileRoute("/_app")({
   component: AppLayout,
@@ -22,19 +27,22 @@ function AppLayout() {
   }
 
   return (
-    <div className="flex min-h-svh flex-col">
-      <header className="flex items-center justify-between border-b px-6 py-3">
-        <span className="text-sm font-medium">api-gateway</span>
-        <div className="flex items-center gap-3">
-          <span className="text-sm text-muted-foreground">{data.user.email}</span>
-          <Button variant="outline" size="sm" onClick={() => signOut()}>
-            Sign out
-          </Button>
-        </div>
-      </header>
-      <main className="mx-auto w-full max-w-4xl flex-1 px-8 py-8">
-        <Outlet />
-      </main>
-    </div>
+    <SidebarProvider>
+      <AppSidebar
+        user={{
+          name: data.user.name || data.user.email,
+          email: data.user.email,
+        }}
+        onSignOut={() => signOut()}
+      />
+      <SidebarInset>
+        <header className="flex h-12 shrink-0 items-center gap-2 border-b px-4">
+          <SidebarTrigger className="-ml-1" />
+        </header>
+        <main className="mx-auto w-full max-w-4xl flex-1 px-6 py-6">
+          <Outlet />
+        </main>
+      </SidebarInset>
+    </SidebarProvider>
   );
 }

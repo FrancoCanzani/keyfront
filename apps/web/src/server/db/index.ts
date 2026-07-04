@@ -1,8 +1,9 @@
 import { drizzle } from "drizzle-orm/postgres-js";
 import postgres from "postgres";
 import * as auth from "./schema/auth";
+import * as gateway from "./schema/gateway";
 
-const schema = { ...auth };
+const schema = { ...auth, ...gateway };
 
 const client = postgres(
   process.env.DATABASE_URL ?? "postgres://localhost/api_gateway",
