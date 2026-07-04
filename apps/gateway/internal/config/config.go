@@ -7,10 +7,11 @@ import (
 )
 
 type Config struct {
-	Addr        string
-	DatabaseURL string
-	RedisURL    string
-	Env         string
+	Addr          string
+	DatabaseURL   string
+	RedisURL      string
+	Env           string
+	GatewayDomain string
 }
 
 func Load() Config {
@@ -19,10 +20,11 @@ func Load() Config {
 	_ = godotenv.Load("../../.env")
 
 	return Config{
-		Addr:        getenv("ADDR", ":8080"),
-		DatabaseURL: getenv("DATABASE_URL", "postgres://localhost/api_gateway"),
-		RedisURL:    getenv("REDIS_URL", "redis://localhost:6379"),
-		Env:         getenv("ENV", "development"),
+		Addr:          getenv("ADDR", ":8080"),
+		DatabaseURL:   getenv("DATABASE_URL", "postgres://localhost/api_gateway"),
+		RedisURL:      getenv("REDIS_URL", "redis://localhost:6379"),
+		Env:           getenv("ENV", "development"),
+		GatewayDomain: getenv("GATEWAY_DOMAIN", "localhost"),
 	}
 }
 
