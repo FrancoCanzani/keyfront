@@ -21,11 +21,15 @@ type Route struct {
 }
 
 type Key struct {
-	KeyID     string `json:"keyId"`
-	ServiceID string `json:"serviceId"`
-	PlanID    string `json:"planId"`
-	Prefix    string `json:"prefix"`
-	ExpiresAt *int64 `json:"expiresAt"`
+	KeyID       string   `json:"keyId"`
+	ServiceID   string   `json:"serviceId"`
+	PlanID      string   `json:"planId"`
+	Prefix      string   `json:"prefix"`
+	ExpiresAt   *int64   `json:"expiresAt"`
+	Environment string   `json:"environment"`
+	RPS         *int     `json:"rps"`
+	Burst       *int     `json:"burst"`
+	IPAllowlist []string `json:"ipAllowlist"`
 }
 
 type Plan struct {

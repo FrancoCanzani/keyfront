@@ -1,19 +1,22 @@
 import { ServiceOverviewPage } from "@/features/services/service-overview";
-import {
-  logsQuery,
-  plansQuery,
-  serviceQuery,
-  usageQuery,
-} from "@/lib/gateway-queries";
+import { serviceQuery, servicesQuery, usageQuery } from "@/lib/gateway-queries";
 import { createFileRoute } from "@tanstack/react-router";
+import { z } from "zod";
+
+const searchSchema = z.object({
+  range: z.enum(["24h", "7d", "30d"]).default("7d"),
+});
 
 export const Route = createFileRoute("/$orgId/services/$serviceId/")({
-  loader: ({ context, params }) =>
+  validateSearch: searchSchema,
+  loaderDeps: ({ search }) => ({ range: search.range }),
+  loader: ({ context, params, deps }) =>
     Promise.all([
       context.queryClient.ensureQueryData(serviceQuery(params.serviceId)),
-      context.queryClient.ensureQueryData(usageQuery(params.serviceId, "7d")),
-      context.queryClient.ensureQueryData(logsQuery(params.serviceId)),
-      context.queryClient.ensureQueryData(plansQuery(params.serviceId)),
+      context.queryClient.ensureQueryData(servicesQuery),
+      context.queryClient.ensureQueryData(
+        usageQuery(params.serviceId, deps.range),
+      ),
     ]),
   component: ServiceOverviewPage,
 });

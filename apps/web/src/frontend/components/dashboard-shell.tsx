@@ -44,7 +44,7 @@ export function DashboardShell() {
           "flex shrink-0 flex-col",
           dashboardSectionGapClass,
           dashboardChromeClass,
-          "pt-5",
+          "pt-3",
         )}
       >
         <AppTopBar
@@ -68,7 +68,7 @@ export function DashboardShell() {
         className={cn(
           "min-h-0 flex-1 overflow-y-auto",
           dashboardChromeClass,
-          "pt-5 pb-10",
+          "pt-8 pb-10",
         )}
       >
         <Outlet />

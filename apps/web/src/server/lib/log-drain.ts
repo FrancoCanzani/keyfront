@@ -7,11 +7,13 @@ import { withRedis } from "./redis";
 type LogQueueEntry = {
   ts: number;
   serviceId: string;
-  keyId: string | null;
+  keyId?: string;
   method: string;
   path: string;
   status: number;
   outcome?: string;
+  region?: string;
+  userAgent?: string;
   ms: number;
 };
 
@@ -36,12 +38,14 @@ export async function drainRequestLogs(db: Database) {
       return [
         {
           serviceId: entry.serviceId,
-          keyId: entry.keyId,
+          keyId: entry.keyId ?? null,
           ts: new Date(entry.ts),
           method: entry.method,
           path: entry.path,
           status: entry.status,
           outcome: entry.outcome ?? null,
+          region: entry.region ?? null,
+          userAgent: entry.userAgent ?? null,
           ms: entry.ms,
         },
       ];

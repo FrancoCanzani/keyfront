@@ -122,6 +122,8 @@ export const requestLogs = pgTable(
     path: text("path").notNull(),
     status: integer("status").notNull(),
     outcome: text("outcome"),
+    region: text("region"),
+    userAgent: text("user_agent"),
     ms: integer("ms").notNull(),
   },
   (t) => [index("request_logs_service_ts_idx").on(t.serviceId, t.ts)],
@@ -142,7 +144,28 @@ export const usageRollup = pgTable(
       .notNull()
       .default(0),
   },
-  (t) => [primaryKey({ columns: [t.keyId, t.windowStart] })],
+  (t) => [
+    primaryKey({ columns: [t.keyId, t.windowStart] }),
+    index("usage_rollup_window_start_idx").on(t.windowStart),
+  ],
+);
+
+export const usageRollupDaily = pgTable(
+  "usage_rollup_daily",
+  {
+    keyId: text("key_id")
+      .notNull()
+      .references(() => apiKeys.id, { onDelete: "cascade" }),
+    day: timestamp("day").notNull(),
+    count: bigint("count", { mode: "number" }).notNull(),
+    okCount: bigint("ok_count", { mode: "number" }).notNull().default(0),
+    err4Count: bigint("err4_count", { mode: "number" }).notNull().default(0),
+    err5Count: bigint("err5_count", { mode: "number" }).notNull().default(0),
+    latencyMsSum: bigint("latency_ms_sum", { mode: "number" })
+      .notNull()
+      .default(0),
+  },
+  (t) => [primaryKey({ columns: [t.keyId, t.day] })],
 );
 
 export const billing = pgTable("billing", {

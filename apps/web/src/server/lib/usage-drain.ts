@@ -1,7 +1,13 @@
 import { inArray, sql } from "drizzle-orm";
 import type { Database } from "../db";
-import { apiKeys, usageRollup } from "../db/schema/gateway";
+import { apiKeys, usageRollup, usageRollupDaily } from "../db/schema/gateway";
 import { withRedis } from "./redis";
+
+function dayStart(windowStart: Date) {
+  const day = new Date(windowStart);
+  day.setUTCHours(0, 0, 0, 0);
+  return day;
+}
 
 // usage:{keyId}:{windowStartMs} hashes → usage_rollup; MULTI makes read+clear atomic
 
@@ -48,6 +54,27 @@ export async function drainUsage(db: Database) {
           err4Count: sql`${usageRollup.err4Count} + ${row.err4Count}`,
           err5Count: sql`${usageRollup.err5Count} + ${row.err5Count}`,
           latencyMsSum: sql`${usageRollup.latencyMsSum} + ${row.latencyMsSum}`,
+        },
+      });
+    await db
+      .insert(usageRollupDaily)
+      .values({
+        keyId: row.keyId,
+        day: dayStart(row.windowStart),
+        count: row.count,
+        okCount: row.okCount,
+        err4Count: row.err4Count,
+        err5Count: row.err5Count,
+        latencyMsSum: row.latencyMsSum,
+      })
+      .onConflictDoUpdate({
+        target: [usageRollupDaily.keyId, usageRollupDaily.day],
+        set: {
+          count: sql`${usageRollupDaily.count} + ${row.count}`,
+          okCount: sql`${usageRollupDaily.okCount} + ${row.okCount}`,
+          err4Count: sql`${usageRollupDaily.err4Count} + ${row.err4Count}`,
+          err5Count: sql`${usageRollupDaily.err5Count} + ${row.err5Count}`,
+          latencyMsSum: sql`${usageRollupDaily.latencyMsSum} + ${row.latencyMsSum}`,
         },
       });
   }

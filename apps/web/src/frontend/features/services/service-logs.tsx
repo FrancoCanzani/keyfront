@@ -1,21 +1,14 @@
 import { useMemo, useState } from "react";
 import { useSuspenseQuery } from "@tanstack/react-query";
 import { getRouteApi } from "@tanstack/react-router";
-import {
-  createColumnHelper,
-  getCoreRowModel,
-  useReactTable,
-} from "@tanstack/react-table";
 import type { InferResponseType } from "hono/client";
 import { Bar, BarChart, XAxis, YAxis } from "recharts";
-import { Button } from "@/components/ui/button";
 import {
   ChartContainer,
   ChartTooltip,
   ChartTooltipContent,
   type ChartConfig,
 } from "@/components/ui/chart";
-import { DataTable } from "@/components/ui/data-table";
 import {
   Empty,
   EmptyContent,
@@ -23,7 +16,6 @@ import {
   EmptyHeader,
   EmptyTitle,
 } from "@/components/ui/empty";
-import { Input } from "@/components/ui/input";
 import {
   Select,
   SelectContent,
@@ -34,12 +26,10 @@ import {
 import {
   Sheet,
   SheetContent,
-  SheetDescription,
   SheetHeader,
   SheetTitle,
 } from "@/components/ui/sheet";
-import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { controlClassName } from "@/components/form-layout";
+import { TimestampInfo } from "@/components/timestamp-info";
 import { GatewaySnippets } from "@/features/services/gateway-snippets";
 import { logsQuery, serviceQuery } from "@/lib/gateway-queries";
 import type { client } from "@/lib/rpc";
@@ -57,6 +47,8 @@ const STATUS_FILTERS = [
 ] as const;
 
 type StatusFilter = (typeof STATUS_FILTERS)[number]["value"];
+
+const SUCCESS_GREEN = "#15803d";
 
 const STATUS_TEXT: Record<number, string> = {
   200: "OK",
@@ -77,10 +69,23 @@ const STATUS_TEXT: Record<number, string> = {
 };
 
 const chartConfig = {
-  ok: { label: "2xx/3xx", color: "#0ca30c" },
+  ok: { label: "2xx/3xx", color: SUCCESS_GREEN },
   err4: { label: "4xx", color: "#ec835a" },
   err5: { label: "5xx", color: "#d03b3b" },
 } satisfies ChartConfig;
+
+const controlHeight =
+  "h-8 min-h-8 box-border shrink-0 py-0 text-sm leading-8";
+
+const pillClass = cn(
+  "inline-flex items-center justify-center rounded border border-border bg-muted/40 px-2.5 font-normal transition-colors hover:bg-muted/60 disabled:pointer-events-none disabled:opacity-50",
+  controlHeight,
+);
+
+const fieldClass = cn(
+  "min-w-0 rounded border border-border bg-muted/40 px-2 font-data text-sm outline-none placeholder:text-muted-foreground focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50",
+  controlHeight,
+);
 
 function matchesStatus(status: number, filter: StatusFilter) {
   switch (filter) {
@@ -92,93 +97,29 @@ function matchesStatus(status: number, filter: StatusFilter) {
       return status >= 400 && status < 500;
     case "5xx":
       return status >= 500;
+    default: {
+      const _exhaustive: never = filter;
+      return _exhaustive;
+    }
   }
 }
 
-const statusDotClassName = (status: number) =>
+const statusBadgeClassName = (status: number) =>
   status >= 500
-    ? "bg-[#d03b3b]"
+    ? "bg-[#d03b3b]/10 text-[#d03b3b]"
     : status >= 400
-      ? "bg-[#ec835a]"
-      : "bg-[#0ca30c]";
-
-const statusTextClassName = (status: number) =>
-  status >= 500
-    ? "text-[#d03b3b]"
-    : status >= 400
-      ? "text-[#ec835a]"
-      : "text-[#0ca30c]";
+      ? "bg-[#ec835a]/10 text-[#ec835a]"
+      : "bg-[#15803d]/10 text-[#15803d]";
 
 const entryId = (entry: LogEntry) =>
   `${entry.ts}-${entry.method}-${entry.path}-${entry.status}-${entry.ms}`;
 
-const columnHelper = createColumnHelper<LogEntry>();
-
-const columns = [
-  columnHelper.accessor("ts", {
-    header: () => <span className="px-2">Time</span>,
-    cell: (info) => (
-      <span className="px-2 font-mono text-xs text-muted-foreground tabular-nums">
-        {new Date(info.getValue()).toLocaleTimeString([], {
-          hour: "2-digit",
-          minute: "2-digit",
-          second: "2-digit",
-        })}
-      </span>
-    ),
-  }),
-  columnHelper.accessor("status", {
-    header: () => <span className="px-2">Status</span>,
-    cell: (info) => (
-      <span className="flex items-center gap-1.5 px-2">
-        <span
-          className={cn(
-            "size-1.5 shrink-0 rounded-full",
-            statusDotClassName(info.getValue()),
-          )}
-        />
-        <span
-          className={cn(
-            "font-mono text-xs font-medium tabular-nums",
-            statusTextClassName(info.getValue()),
-          )}
-        >
-          {info.getValue()}
-        </span>
-      </span>
-    ),
-  }),
-  columnHelper.accessor("method", {
-    header: () => <span className="px-2">Method</span>,
-    cell: (info) => (
-      <code className="px-2 text-xs font-medium">{info.getValue()}</code>
-    ),
-  }),
-  columnHelper.accessor("path", {
-    header: () => <span className="px-2">Path</span>,
-    cell: (info) => (
-      <code className="block max-w-72 truncate px-2 text-xs text-muted-foreground">
-        {info.getValue()}
-      </code>
-    ),
-  }),
-  columnHelper.accessor("ms", {
-    header: () => <span className="px-2 text-right">Latency</span>,
-    cell: (info) => (
-      <span className="block px-2 text-right font-mono text-xs text-muted-foreground tabular-nums">
-        {info.getValue()} ms
-      </span>
-    ),
-  }),
-  columnHelper.accessor("keyPrefix", {
-    header: () => <span className="px-2">Key</span>,
-    cell: (info) => (
-      <code className="px-2 text-xs text-muted-foreground">
-        {info.getValue() === "-" ? "—" : `${info.getValue()}…`}
-      </code>
-    ),
-  }),
-];
+function formatVolumeTime(ts: number) {
+  return new Date(ts).toLocaleTimeString([], {
+    hour: "2-digit",
+    minute: "2-digit",
+  });
+}
 
 function buildVolumeSeries(entries: LogEntry[]) {
   if (entries.length < 2) return [];
@@ -205,10 +146,7 @@ function buildVolumeSeries(entries: LogEntry[]) {
   }
   return slots.map((slot) => ({
     ...slot,
-    label: new Date(slot.ts).toLocaleTimeString([], {
-      hour: "2-digit",
-      minute: "2-digit",
-    }),
+    label: formatVolumeTime(slot.ts),
   }));
 }
 
@@ -240,12 +178,6 @@ export function ServiceLogsPage() {
   );
   const volume = useMemo(() => buildVolumeSeries(filtered), [filtered]);
 
-  const table = useReactTable({
-    data: filtered,
-    columns,
-    getCoreRowModel: getCoreRowModel(),
-  });
-
   const setSearch = (
     patch: Partial<{ status: StatusFilter; method: string; key: string }>,
   ) =>
@@ -256,134 +188,269 @@ export function ServiceLogsPage() {
 
   if (logs.length === 0) {
     return (
-      <Empty>
-        <EmptyHeader>
-          <EmptyTitle>No logs yet</EmptyTitle>
-          <EmptyDescription>
-            The last 100 requests through the gateway show up here, including
-            rejections. Send your first one:
-          </EmptyDescription>
-        </EmptyHeader>
-        <EmptyContent>
-          <GatewaySnippets hostKey={service.hostKey} />
-        </EmptyContent>
-      </Empty>
+      <div className="mx-auto w-full max-w-4xl text-sm">
+        <section className="grid gap-5">
+          <SectionHeading
+            title="Logs"
+            description="Last 100 requests through the gateway, including rejections."
+          />
+          <Empty className="p-4 md:p-4">
+            <EmptyHeader>
+              <EmptyTitle className="text-sm">No logs yet</EmptyTitle>
+              <EmptyDescription className="text-sm">
+                Send your first request to see it here.
+              </EmptyDescription>
+            </EmptyHeader>
+            <EmptyContent>
+              <GatewaySnippets hostKey={service.hostKey} />
+            </EmptyContent>
+          </Empty>
+        </section>
+      </div>
     );
   }
 
   return (
-    <div className="space-y-4">
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <div className="flex flex-wrap items-center gap-2">
-          <Tabs
-            value={status}
-            onValueChange={(value) =>
-              setSearch({ status: value as StatusFilter })
-            }
-          >
-            <TabsList>
-              {STATUS_FILTERS.map((item) => (
-                <TabsTrigger key={item.value} value={item.value}>
-                  {item.label}
-                </TabsTrigger>
-              ))}
-            </TabsList>
-          </Tabs>
-          <Select
-            value={method}
-            onValueChange={(value) => setSearch({ method: value })}
-          >
-            <SelectTrigger className={`${controlClassName} w-28`}>
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">All methods</SelectItem>
-              {methods.map((item) => (
-                <SelectItem key={item} value={item}>
-                  {item}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-          <Input
-            value={key}
-            onChange={(e) => setSearch({ key: e.target.value })}
-            placeholder="Filter by key prefix…"
-            className={`${controlClassName} w-44`}
-          />
-        </div>
-        <div className="flex items-center gap-3">
-          <span className="text-xs text-muted-foreground tabular-nums">
-            {filtered.length} of last {logs.length}
-          </span>
-          <Button
-            variant="outline"
-            className="h-8 gap-1.5"
-            onClick={() => setLive((current) => !current)}
-          >
-            <span
-              className={cn(
-                "size-1.5 rounded-full",
-                live ? "animate-pulse bg-[#0ca30c]" : "bg-muted-foreground/40",
-              )}
+    <div className="mx-auto w-full max-w-4xl text-sm">
+      <div className="grid gap-10">
+        <section className="grid gap-3">
+          <div className="flex flex-wrap items-start justify-between gap-3">
+            <SectionHeading
+              title="Logs"
+              description="Last 100 requests through the gateway."
             />
-            {live ? "Live" : "Paused"}
-          </Button>
-        </div>
+            <div className="flex items-center gap-3">
+              <span className="font-data text-sm text-muted-foreground tabular-nums">
+                {filtered.length} of {logs.length}
+              </span>
+              <button
+                type="button"
+                className={cn(pillClass, "gap-1.5 px-2.5")}
+                onClick={() => setLive((current) => !current)}
+              >
+                <span
+                  className={cn(
+                    "size-1.5 rounded-full",
+                    live
+                      ? "animate-pulse bg-[#15803d]"
+                      : "bg-muted-foreground/40",
+                  )}
+                />
+                {live ? "Live" : "Paused"}
+              </button>
+            </div>
+          </div>
+
+          <div className="flex flex-wrap items-center gap-2">
+            <div className="flex flex-wrap gap-1">
+              {STATUS_FILTERS.map((item) => (
+                <button
+                  key={item.value}
+                  type="button"
+                  className={cn(
+                    pillClass,
+                    status === item.value &&
+                      "border-foreground/20 bg-muted/60 text-foreground",
+                  )}
+                  onClick={() => setSearch({ status: item.value })}
+                >
+                  {item.label}
+                </button>
+              ))}
+            </div>
+            <Select
+              value={method}
+              onValueChange={(value) => setSearch({ method: value })}
+            >
+              <SelectTrigger
+                size="sm"
+                className={cn(fieldClass, "w-28 shadow-none")}
+              >
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all" className="font-data text-sm">
+                  All methods
+                </SelectItem>
+                {methods.map((item) => (
+                  <SelectItem key={item} value={item} className="font-data text-sm">
+                    {item}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            <input
+              value={key}
+              onChange={(e) => setSearch({ key: e.target.value })}
+              placeholder="Filter by key prefix…"
+              className={cn(fieldClass, "w-44")}
+            />
+          </div>
+        </section>
+
+        {volume.length > 0 ? (
+          <section className="grid gap-3">
+            <SectionHeading
+              title="Volume"
+              description="Request rate across the filtered window."
+            />
+            <ChartContainer config={chartConfig} className="h-20 w-full">
+              <BarChart data={volume} barCategoryGap={1}>
+                <XAxis
+                  dataKey="label"
+                  tickLine={false}
+                  axisLine={false}
+                  tickMargin={6}
+                  interval="preserveStartEnd"
+                  minTickGap={80}
+                  tick={{ fontSize: 14, fontFamily: "var(--font-mono)" }}
+                />
+                <YAxis hide />
+                <ChartTooltip content={<ChartTooltipContent />} />
+                <Bar dataKey="ok" stackId="v" fill="var(--color-ok)" />
+                <Bar dataKey="err4" stackId="v" fill="var(--color-err4)" />
+                <Bar
+                  dataKey="err5"
+                  stackId="v"
+                  fill="var(--color-err5)"
+                  radius={[1, 1, 0, 0]}
+                />
+              </BarChart>
+            </ChartContainer>
+          </section>
+        ) : null}
+
+        <section className="grid gap-3">
+          {filtered.length === 0 ? (
+            <Empty className="p-4 md:p-4">
+              <EmptyHeader>
+                <EmptyDescription className="text-sm">
+                  No requests match these filters.
+                </EmptyDescription>
+              </EmptyHeader>
+            </Empty>
+          ) : (
+            <LogsTable
+              rows={filtered}
+              selected={selected}
+              onSelect={setSelected}
+            />
+          )}
+        </section>
       </div>
 
-      {volume.length > 0 ? (
-        <ChartContainer config={chartConfig} className="h-20 w-full">
-          <BarChart data={volume} barCategoryGap={1}>
-            <XAxis
-              dataKey="label"
-              tickLine={false}
-              axisLine={false}
-              tickMargin={6}
-              interval="preserveStartEnd"
-              minTickGap={80}
-            />
-            <YAxis hide />
-            <ChartTooltip content={<ChartTooltipContent />} />
-            <Bar dataKey="ok" stackId="v" fill="var(--color-ok)" />
-            <Bar dataKey="err4" stackId="v" fill="var(--color-err4)" />
-            <Bar
-              dataKey="err5"
-              stackId="v"
-              fill="var(--color-err5)"
-              radius={[1, 1, 0, 0]}
-            />
-          </BarChart>
-        </ChartContainer>
-      ) : null}
-
-      {filtered.length === 0 ? (
-        <Empty className="p-6 md:p-6">
-          <EmptyHeader>
-            <EmptyDescription>
-              No requests match these filters.
-            </EmptyDescription>
-          </EmptyHeader>
-        </Empty>
-      ) : (
-        <DataTable
-          table={table}
-          onRowClick={(entry) => setSelected(entry)}
-          getRowClassName={(row) =>
-            cn(
-              row.original.status >= 500 && "bg-[#d03b3b]/5",
-              row.original.status >= 400 &&
-                row.original.status < 500 &&
-                "bg-[#ec835a]/5",
-              selected && entryId(row.original) === entryId(selected)
-                ? "bg-muted"
-                : "hover:bg-muted/50",
-            )
-          }
-        />
-      )}
-
       <LogDetailSheet entry={selected} onClose={() => setSelected(null)} />
+    </div>
+  );
+}
+
+function LogsTable({
+  rows,
+  selected,
+  onSelect,
+}: {
+  rows: LogEntry[];
+  selected: LogEntry | null;
+  onSelect: (entry: LogEntry) => void;
+}) {
+  return (
+    <div className="overflow-hidden rounded border border-border">
+      <div className="max-h-[calc(100dvh-20rem)] overflow-auto">
+        <table className="w-full table-fixed text-sm">
+          <colgroup>
+            <col className="w-[15%]" />
+            <col className="w-[8%]" />
+            <col className="w-[8%]" />
+            <col className="w-[18%]" />
+            <col className="w-[10%]" />
+            <col className="w-[41%]" />
+          </colgroup>
+          <thead className="sticky top-0 z-10 bg-background">
+            <tr className="border-b border-border">
+              <th className="h-9 px-2 text-left text-sm font-normal text-muted-foreground">
+                Time
+              </th>
+              <th className="h-9 px-2 text-left text-sm font-normal text-muted-foreground">
+                Status
+              </th>
+              <th className="h-9 px-2 text-left text-sm font-normal text-muted-foreground">
+                Method
+              </th>
+              <th className="h-9 px-2 text-left text-sm font-normal text-muted-foreground">
+                Path
+              </th>
+              <th className="h-9 px-2 text-right text-sm font-normal text-muted-foreground">
+                Latency
+              </th>
+              <th className="h-9 px-2 text-left text-sm font-normal text-muted-foreground">
+                Key
+              </th>
+            </tr>
+          </thead>
+          <tbody>
+            {rows.map((entry) => (
+              <tr
+                key={entryId(entry)}
+                tabIndex={0}
+                className={cn(
+                  "cursor-pointer border-0 hover:bg-muted/50",
+                  entry.status >= 500 && "bg-[#d03b3b]/5",
+                  entry.status >= 400 &&
+                    entry.status < 500 &&
+                    "bg-[#ec835a]/5",
+                  selected &&
+                    entryId(entry) === entryId(selected) &&
+                    "bg-muted",
+                )}
+                onClick={() => onSelect(entry)}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter" || e.key === " ") {
+                    e.preventDefault();
+                    onSelect(entry);
+                  }
+                }}
+              >
+                <td className="px-2 py-2 text-muted-foreground">
+                  <TimestampInfo
+                    value={entry.ts}
+                    className="text-sm text-muted-foreground"
+                  />
+                </td>
+                <td className="px-2 py-2">
+                  <span
+                    className={cn(
+                      "inline-flex rounded px-1.5 py-0.5 font-data text-xs tabular-nums",
+                      statusBadgeClassName(entry.status),
+                    )}
+                  >
+                    {entry.status}
+                  </span>
+                </td>
+                <td className="px-2 py-2 font-data">{entry.method}</td>
+                <td
+                  className="max-w-0 px-2 py-2 font-data text-muted-foreground"
+                  title={entry.path}
+                >
+                  <span className="block truncate">{entry.path}</span>
+                </td>
+                <td className="px-2 py-2 text-right font-data text-muted-foreground tabular-nums">
+                  {entry.ms} ms
+                </td>
+                <td
+                  className="max-w-0 px-2 py-2 font-data text-muted-foreground"
+                  title={
+                    entry.keyPrefix === "-" ? undefined : entry.keyPrefix
+                  }
+                >
+                  <span className="block truncate">
+                    {entry.keyPrefix === "-" ? "—" : `${entry.keyPrefix}…`}
+                  </span>
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
     </div>
   );
 }
@@ -396,33 +463,36 @@ function LogDetailSheet({
   onClose: () => void;
 }) {
   return (
-    <Sheet open={entry !== null} onOpenChange={(next) => (next ? null : onClose())}>
-      <SheetContent side="right" className="p-4">
+    <Sheet
+      open={entry !== null}
+      onOpenChange={(open) => {
+        if (!open) onClose();
+      }}
+    >
+      <SheetContent side="right" className="gap-4 p-4">
         {entry ? (
           <>
             <SheetHeader className="p-0">
-              <SheetTitle className="flex items-center gap-2 font-mono text-sm">
+              <SheetTitle className="flex items-center gap-2 font-data text-sm">
                 <span>{entry.method}</span>
                 <span className="truncate font-normal text-muted-foreground">
                   {entry.path}
                 </span>
               </SheetTitle>
-              <SheetDescription>
-                {new Date(entry.ts).toLocaleString()}
-              </SheetDescription>
+              <div className="text-sm text-muted-foreground">
+                <TimestampInfo
+                  value={entry.ts}
+                  displayType="datetime"
+                  className="text-sm text-muted-foreground"
+                />
+              </div>
             </SheetHeader>
 
             <div className="flex items-center gap-2">
               <span
                 className={cn(
-                  "size-2 rounded-full",
-                  statusDotClassName(entry.status),
-                )}
-              />
-              <span
-                className={cn(
-                  "font-mono text-lg font-medium tabular-nums",
-                  statusTextClassName(entry.status),
+                  "inline-flex rounded px-1.5 py-0.5 font-data text-sm tabular-nums",
+                  statusBadgeClassName(entry.status),
                 )}
               >
                 {entry.status}
@@ -432,25 +502,58 @@ function LogDetailSheet({
               </span>
             </div>
 
-            <dl className="grid grid-cols-[6rem_minmax(0,1fr)] gap-x-3 gap-y-2 border-t pt-4 text-xs">
+            <dl className="grid grid-cols-[6rem_minmax(0,1fr)] gap-x-3 gap-y-2 border-t pt-4 font-data text-sm">
+              {entry.outcome ? (
+                <>
+                  <dt className="text-muted-foreground">Outcome</dt>
+                  <dd>{entry.outcome}</dd>
+                </>
+              ) : null}
               <dt className="text-muted-foreground">Latency</dt>
-              <dd className="font-mono tabular-nums">{entry.ms} ms</dd>
+              <dd className="tabular-nums">{entry.ms} ms</dd>
               <dt className="text-muted-foreground">Key</dt>
-              <dd className="font-mono">
-                {entry.keyPrefix === "-" ? "No key sent" : `${entry.keyPrefix}…`}
+              <dd>
+                {entry.keyPrefix === "-" ? "No key sent" : entry.keyPrefix}
               </dd>
               <dt className="text-muted-foreground">Method</dt>
-              <dd className="font-mono">{entry.method}</dd>
+              <dd>{entry.method}</dd>
               <dt className="text-muted-foreground">Path</dt>
-              <dd className="break-all font-mono">{entry.path}</dd>
+              <dd className="break-all">{entry.path}</dd>
+              {entry.region ? (
+                <>
+                  <dt className="text-muted-foreground">Region</dt>
+                  <dd className="uppercase">{entry.region}</dd>
+                </>
+              ) : null}
+              {entry.userAgent ? (
+                <>
+                  <dt className="text-muted-foreground">User agent</dt>
+                  <dd className="break-all font-sans">{entry.userAgent}</dd>
+                </>
+              ) : null}
             </dl>
 
-            <pre className="overflow-x-auto rounded-lg border bg-muted/40 p-3 font-mono text-xs leading-relaxed">
+            <pre className="overflow-x-auto rounded border border-border bg-muted/40 p-2.5 font-data text-sm leading-relaxed">
               {JSON.stringify(entry, null, 2)}
             </pre>
           </>
         ) : null}
       </SheetContent>
     </Sheet>
+  );
+}
+
+function SectionHeading({
+  title,
+  description,
+}: {
+  title: string;
+  description: string;
+}) {
+  return (
+    <h2 className="m-0 text-sm leading-snug">
+      <span className="font-medium text-foreground">{title}.</span>{" "}
+      <span className="text-muted-foreground">{description}</span>
+    </h2>
   );
 }

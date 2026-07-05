@@ -11,10 +11,15 @@ import { logsQuerySchema } from "./schemas";
 // written by the gateway (internal/proxy/log.go) — keep in lockstep
 type LogEntry = {
   ts: number;
+  serviceId?: string;
+  keyId?: string;
   keyPrefix: string;
   method: string;
   path: string;
   status: number;
+  outcome?: string;
+  region?: string;
+  userAgent?: string;
   ms: number;
 };
 

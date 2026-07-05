@@ -14,12 +14,14 @@ type DataTableProps<TData> = {
   table: TanstackTable<TData>;
   onRowClick?: (row: TData) => void;
   getRowClassName?: (row: Row<TData>) => string | undefined;
+  compact?: boolean;
 };
 
 export function DataTable<TData>({
   table,
   onRowClick,
   getRowClassName,
+  compact = false,
 }: DataTableProps<TData>) {
   const rows = table.getRowModel().rows;
 
@@ -37,7 +39,8 @@ export function DataTable<TData>({
                   <TableHead
                     key={header.id}
                     className={cn(
-                      "border-b border-border/50 p-0 text-left align-middle text-xs font-normal text-muted-foreground last:border-r-0",
+                      "border-b border-border/50 p-0 text-left align-middle font-normal text-muted-foreground last:border-r-0",
+                      compact ? "text-[10px]" : "text-xs",
                       header.column.id === "select" && "w-8",
                     )}
                   >
@@ -73,7 +76,8 @@ export function DataTable<TData>({
                     <TableCell
                       key={cell.id}
                       className={cn(
-                        "h-10 border-b border-dashed border-border/50 py-0 text-xs px-2 align-middle",
+                        "border-b border-dashed border-border/50 py-0 px-2 align-middle",
+                        compact ? "h-8 text-[10px]" : "h-10 text-xs",
                         isLastRow && "border-b-0",
                         cell.column.id === "select" && "w-8 p-0",
                         cell.column.id === "actions" && "p-0 text-center",

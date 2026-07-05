@@ -5,6 +5,7 @@ import { createAuth } from "./auth";
 import { checkDb, createDatabase } from "./db";
 import { authMiddleware } from "./middleware/auth";
 import { drainRequestLogs } from "./lib/log-drain";
+import { cleanupUsageRollup } from "./lib/usage-cleanup";
 import { drainUsage } from "./lib/usage-drain";
 import { consumersRoutes } from "./routes/protected/consumers";
 import { keysRoutes } from "./routes/protected/keys";
@@ -12,6 +13,7 @@ import { logsRoutes } from "./routes/protected/logs";
 import { plansRoutes } from "./routes/protected/plans";
 import { organizationRoutes } from "./routes/protected/organization";
 import { servicesRoutes } from "./routes/protected/services";
+import { testRoutes } from "./routes/protected/test";
 import { usageRoutes } from "./routes/protected/usage";
 import type { AppRouteEnv } from "./types";
 
@@ -41,7 +43,8 @@ export const apiRoutes = app
   .route("/consumers", consumersRoutes)
   .route("/keys", keysRoutes)
   .route("/usage", usageRoutes)
-  .route("/logs", logsRoutes);
+  .route("/logs", logsRoutes)
+  .route("/test", testRoutes);
 
 export type AppType = typeof apiRoutes;
 
@@ -53,6 +56,7 @@ export default {
     try {
       await drainUsage(db);
       await drainRequestLogs(db);
+      await cleanupUsageRollup(db);
     } finally {
       await close();
     }

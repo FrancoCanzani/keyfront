@@ -35,7 +35,14 @@ func main() {
 	p := proxy.New(cfg, rdb)
 	r.HandleFunc("/*", p.Handle)
 
-	srv := &http.Server{Addr: cfg.Addr, Handler: r}
+	srv := &http.Server{
+		Addr:              cfg.Addr,
+		Handler:           r,
+		ReadHeaderTimeout: 10 * time.Second,
+		ReadTimeout:       30 * time.Second,
+		WriteTimeout:      60 * time.Second,
+		IdleTimeout:       120 * time.Second,
+	}
 
 	go func() {
 		log.Printf("gateway listening on %s", cfg.Addr)

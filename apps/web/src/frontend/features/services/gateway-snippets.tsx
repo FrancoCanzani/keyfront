@@ -1,8 +1,7 @@
 import { useState } from "react";
 import { toast } from "sonner";
-import { Button } from "@/components/ui/button";
-import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { gatewayDomain } from "@/lib/gateway-queries";
+import { cn } from "@/lib/utils";
 
 const LANGUAGES = [
   { value: "curl", label: "curl" },
@@ -43,37 +42,49 @@ function snippet(language: Language, url: string) {
   }
 }
 
+const controlHeight =
+  "h-7 min-h-7 box-border shrink-0 py-0 text-[11px] leading-7";
+
+const pillClass = cn(
+  "inline-flex items-center justify-center rounded border border-border bg-muted/40 px-2.5 font-normal transition-colors hover:bg-muted/60",
+  controlHeight,
+);
+
 export function GatewaySnippets({ hostKey }: { hostKey: string }) {
   const [language, setLanguage] = useState<Language>("curl");
   const code = snippet(language, gatewayUrl(hostKey));
 
   return (
-    <div className="grid max-w-2xl gap-2">
-      <div className="flex items-center justify-between gap-2">
-        <Tabs
-          value={language}
-          onValueChange={(value) => setLanguage(value as Language)}
-        >
-          <TabsList>
-            {LANGUAGES.map((item) => (
-              <TabsTrigger key={item.value} value={item.value}>
-                {item.label}
-              </TabsTrigger>
-            ))}
-          </TabsList>
-        </Tabs>
-        <Button
-          variant="outline"
-          className="h-8 shrink-0"
+    <div className="grid min-w-0 gap-3">
+      <div className="flex min-w-0 items-center justify-between gap-3">
+        <div className="flex flex-wrap gap-1">
+          {LANGUAGES.map((item) => (
+            <button
+              key={item.value}
+              type="button"
+              className={cn(
+                pillClass,
+                language === item.value &&
+                  "border-foreground/20 bg-muted/60 text-foreground",
+              )}
+              onClick={() => setLanguage(item.value)}
+            >
+              {item.label}
+            </button>
+          ))}
+        </div>
+        <button
+          type="button"
+          className={pillClass}
           onClick={() => {
             navigator.clipboard.writeText(code);
             toast.success("Copied to clipboard");
           }}
         >
           Copy
-        </Button>
+        </button>
       </div>
-      <pre className="overflow-x-auto rounded-lg border bg-muted/40 px-3 py-2.5 font-mono text-xs leading-relaxed">
+      <pre className="max-w-full overflow-x-auto rounded border border-border bg-muted/40 px-2.5 py-2 font-data text-[11px] leading-relaxed">
         {code}
       </pre>
     </div>

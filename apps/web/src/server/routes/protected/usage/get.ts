@@ -7,6 +7,7 @@ import {
   plans,
   services,
   usageRollup,
+  usageRollupDaily,
 } from "../../../db/schema/gateway";
 import { getOrganizationId } from "../../../middleware/auth";
 import { drainUsage } from "../../../lib/usage-drain";
@@ -39,38 +40,55 @@ export const getUsage = new Hono<AppRouteEnv>().get(
     await drainOnRead(db);
 
     const since = new Date(Date.now() - rangeHours[range] * 3_600_000);
+    if (range !== "24h") since.setUTCHours(0, 0, 0, 0);
     const monthStart = new Date();
     monthStart.setUTCDate(1);
     monthStart.setUTCHours(0, 0, 0, 0);
     const sinceParam = sql.param(since, usageRollup.windowStart);
     const monthStartParam = sql.param(monthStart, usageRollup.windowStart);
 
-    const bucket =
-      range === "24h"
-        ? sql<string>`date_trunc('hour', ${usageRollup.windowStart})`
-        : sql<string>`date_trunc('day', ${usageRollup.windowStart})`;
-
     const scoped = and(
       eq(consumers.serviceId, serviceId),
       eq(services.organizationId, organizationId),
     );
 
-    const series = await db
-      .select({
-        bucket,
-        count: sql`sum(${usageRollup.count})`.mapWith(Number),
-        ok: sql`sum(${usageRollup.okCount})`.mapWith(Number),
-        err4: sql`sum(${usageRollup.err4Count})`.mapWith(Number),
-        err5: sql`sum(${usageRollup.err5Count})`.mapWith(Number),
-        latencyMsSum: sql`sum(${usageRollup.latencyMsSum})`.mapWith(Number),
-      })
-      .from(usageRollup)
-      .innerJoin(apiKeys, eq(usageRollup.keyId, apiKeys.id))
-      .innerJoin(consumers, eq(apiKeys.consumerId, consumers.id))
-      .innerJoin(services, eq(consumers.serviceId, services.id))
-      .where(and(scoped, gte(usageRollup.windowStart, since)))
-      .groupBy(bucket)
-      .orderBy(bucket);
+    const hourBucket = sql<string>`date_trunc('hour', ${usageRollup.windowStart})`;
+    const dayBucket = sql<string>`${usageRollupDaily.day}`;
+
+    const series =
+      range === "24h"
+        ? await db
+            .select({
+              bucket: hourBucket,
+              count: sql`sum(${usageRollup.count})`.mapWith(Number),
+              ok: sql`sum(${usageRollup.okCount})`.mapWith(Number),
+              err4: sql`sum(${usageRollup.err4Count})`.mapWith(Number),
+              err5: sql`sum(${usageRollup.err5Count})`.mapWith(Number),
+              latencyMsSum: sql`sum(${usageRollup.latencyMsSum})`.mapWith(Number),
+            })
+            .from(usageRollup)
+            .innerJoin(apiKeys, eq(usageRollup.keyId, apiKeys.id))
+            .innerJoin(consumers, eq(apiKeys.consumerId, consumers.id))
+            .innerJoin(services, eq(consumers.serviceId, services.id))
+            .where(and(scoped, gte(usageRollup.windowStart, since)))
+            .groupBy(hourBucket)
+            .orderBy(hourBucket)
+        : await db
+            .select({
+              bucket: dayBucket,
+              count: sql`sum(${usageRollupDaily.count})`.mapWith(Number),
+              ok: sql`sum(${usageRollupDaily.okCount})`.mapWith(Number),
+              err4: sql`sum(${usageRollupDaily.err4Count})`.mapWith(Number),
+              err5: sql`sum(${usageRollupDaily.err5Count})`.mapWith(Number),
+              latencyMsSum: sql`sum(${usageRollupDaily.latencyMsSum})`.mapWith(Number),
+            })
+            .from(usageRollupDaily)
+            .innerJoin(apiKeys, eq(usageRollupDaily.keyId, apiKeys.id))
+            .innerJoin(consumers, eq(apiKeys.consumerId, consumers.id))
+            .innerJoin(services, eq(consumers.serviceId, services.id))
+            .where(and(scoped, gte(usageRollupDaily.day, since)))
+            .groupBy(usageRollupDaily.day)
+            .orderBy(usageRollupDaily.day);
 
     const keys = await db
       .select({

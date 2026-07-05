@@ -282,7 +282,7 @@ function StatTile({ label, value }: { label: string; value: string }) {
   return (
     <div>
       <p className="text-xs text-muted-foreground">{label}</p>
-      <p className="text-xl font-medium">{value}</p>
+      <p className="font-data text-xl font-medium">{value}</p>
     </div>
   );
 }

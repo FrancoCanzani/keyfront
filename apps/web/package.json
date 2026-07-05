@@ -11,12 +11,14 @@
     "db:migrate": "drizzle-kit migrate",
     "db:push": "drizzle-kit push",
     "sync": "bun run src/server/sync-all.ts",
+    "backfill:usage-daily": "bun run src/server/backfill-usage-daily.ts",
     "release": "drizzle-kit migrate && bun run src/server/sync-all.ts",
     "deploy": "wrangler deploy",
     "check": "tsc -b && vite build && wrangler deploy --dry-run"
   },
   "dependencies": {
     "@fontsource-variable/geist": "^5.2.9",
+    "@fontsource-variable/geist-mono": "^5.2.8",
     "@fontsource-variable/inter": "^5.2.8",
     "@fontsource-variable/roboto-slab": "^5.2.8",
     "@hono/zod-validator": "^0.8.0",
