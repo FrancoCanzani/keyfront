@@ -1,16 +1,11 @@
 import { CheckCircle2Icon, CircleIcon } from "lucide-react";
-import { toast } from "sonner";
-import { FormSection } from "@/components/form-layout";
-import { Button } from "@/components/ui/button";
+import { FormHeader, FormSection } from "@/components/form-layout";
 import {
   Empty,
   EmptyDescription,
   EmptyHeader,
 } from "@/components/ui/empty";
-import {
-  GatewaySnippets,
-  gatewayUrl,
-} from "@/features/services/gateway-snippets";
+import { TestDialog } from "@/features/services/test-dialog";
 import {
   logsQuery,
   plansQuery,
@@ -44,7 +39,6 @@ export function ServiceOverviewPage() {
     totals.count > 0 ? totals.latencyMsSum / totals.count : null;
   const activeKeys = usage.keys.filter((key) => key.status === "active").length;
   const failures = logs.filter((entry) => entry.status >= 400).slice(0, 5);
-  const url = gatewayUrl(service.hostKey);
 
   const steps = [
     {
@@ -61,7 +55,7 @@ export function ServiceOverviewPage() {
     },
     {
       label: "Send your first request",
-      description: "Use the snippet below with your key.",
+      description: "Open Test for a ready-made request.",
       done: totals.count > 0,
       to: null,
     },
@@ -70,10 +64,14 @@ export function ServiceOverviewPage() {
 
   return (
     <div className="grid gap-10">
-      <FormSection
-        title="Overview"
-        description="Traffic and reliability over the last 7 days."
-      >
+      <section className="grid gap-5">
+        <div className="flex items-start justify-between gap-4">
+          <FormHeader
+            title="Overview"
+            description="Traffic and reliability over the last 7 days."
+          />
+          <TestDialog hostKey={service.hostKey} />
+        </div>
         <div className="grid border-y sm:grid-cols-2 xl:grid-cols-4">
           <Metric label="Requests" value={totals.count.toLocaleString()} />
           <Metric
@@ -88,7 +86,7 @@ export function ServiceOverviewPage() {
           />
           <Metric label="Active keys" value={activeKeys.toLocaleString()} />
         </div>
-      </FormSection>
+      </section>
 
       {setupDone ? null : (
         <FormSection
@@ -135,28 +133,6 @@ export function ServiceOverviewPage() {
           </div>
         </FormSection>
       )}
-
-      <FormSection
-        title="Your gateway endpoint"
-        description="Authenticated requests to this URL are forwarded to your origin."
-      >
-        <div className="flex max-w-2xl items-center gap-2">
-          <code className="flex-1 overflow-x-auto rounded-lg border bg-muted/40 px-3 py-2 font-mono text-xs tabular-nums">
-            {url}
-          </code>
-          <Button
-            variant="outline"
-            className="h-8 shrink-0"
-            onClick={() => {
-              navigator.clipboard.writeText(url);
-              toast.success("Copied to clipboard");
-            }}
-          >
-            Copy
-          </Button>
-        </div>
-        <GatewaySnippets hostKey={service.hostKey} />
-      </FormSection>
 
       <FormSection
         title="Recent failures"
