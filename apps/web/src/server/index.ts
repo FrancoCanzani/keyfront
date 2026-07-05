@@ -2,21 +2,8 @@ import { Hono } from "hono";
 import { logger } from "hono/logger";
 import { HTTPException } from "hono/http-exception";
 import { createAuth } from "./auth";
-import { checkDb, createDatabase } from "./db";
+import { checkDb } from "./db";
 import { authMiddleware } from "./middleware/auth";
-import { drainRequestLogs } from "./lib/log-drain";
-import { cleanupUsageRollup } from "./lib/usage-cleanup";
-import { drainUsage } from "./lib/usage-drain";
-import { consumersRoutes } from "./routes/protected/consumers";
-import { keysRoutes } from "./routes/protected/keys";
-import { logsRoutes } from "./routes/protected/logs";
-import { plansRoutes } from "./routes/protected/plans";
-import { organizationRoutes } from "./routes/protected/organization";
-import { servicesRoutes } from "./routes/protected/services";
-import { specsRoutes } from "./routes/protected/specs";
-import { referenceRoutes } from "./routes/public/reference";
-import { testRoutes } from "./routes/protected/test";
-import { usageRoutes } from "./routes/protected/usage";
 import type { AppRouteEnv } from "./types";
 
 const app = new Hono<AppRouteEnv>();
@@ -38,31 +25,10 @@ app.on(["POST", "GET"], "/api/auth/*", (c) =>
 
 export const apiRoutes = app
   .basePath("/api")
-  .get("/health", async (c) => c.json({ ok: await checkDb(c.get("db")) }))
-  .route("/organization", organizationRoutes)
-  .route("/services", servicesRoutes)
-  .route("/plans", plansRoutes)
-  .route("/consumers", consumersRoutes)
-  .route("/keys", keysRoutes)
-  .route("/usage", usageRoutes)
-  .route("/logs", logsRoutes)
-  .route("/test", testRoutes)
-  .route("/specs", specsRoutes)
-  .route("/reference", referenceRoutes);
+  .get("/health", async (c) => c.json({ ok: await checkDb(c.get("db")) }));
 
 export type AppType = typeof apiRoutes;
 
-// Workers runtime: the assets binding serves the SPA; cron replaces setInterval
 export default {
   fetch: app.fetch,
-  scheduled: async () => {
-    const { db, close } = createDatabase();
-    try {
-      await drainUsage(db);
-      await drainRequestLogs(db);
-      await cleanupUsageRollup(db);
-    } finally {
-      await close();
-    }
-  },
 };

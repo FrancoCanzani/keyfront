@@ -5,38 +5,29 @@ import (
 	"errors"
 	"log"
 	"net/http"
+	"os"
 	"os/signal"
 	"syscall"
 	"time"
 
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/chi/v5/middleware"
-
-	"github.com/francocanzani/keyfront/internal/cache"
-	"github.com/francocanzani/keyfront/internal/config"
-	"github.com/francocanzani/keyfront/internal/proxy"
 )
 
 func main() {
-	cfg := config.Load()
+	addr := os.Getenv("ADDR")
+	if addr == "" {
+		addr = ":8080"
+	}
 
 	ctx, stop := signal.NotifyContext(context.Background(), syscall.SIGINT, syscall.SIGTERM)
 	defer stop()
 
-	rdb, err := cache.NewRedis(ctx, cfg.RedisURL)
-	if err != nil {
-		log.Fatalf("redis: %v", err)
-	}
-	defer func() { _ = rdb.Close() }()
-
 	r := chi.NewRouter()
 	r.Use(middleware.Logger)
 
-	p := proxy.New(cfg, rdb)
-	r.HandleFunc("/*", p.Handle)
-
 	srv := &http.Server{
-		Addr:              cfg.Addr,
+		Addr:              addr,
 		Handler:           r,
 		ReadHeaderTimeout: 10 * time.Second,
 		ReadTimeout:       30 * time.Second,
@@ -45,7 +36,7 @@ func main() {
 	}
 
 	go func() {
-		log.Printf("gateway listening on %s", cfg.Addr)
+		log.Printf("gateway listening on %s", addr)
 		if err := srv.ListenAndServe(); err != nil && !errors.Is(err, http.ErrServerClosed) {
 			log.Fatalf("serve: %v", err)
 		}
