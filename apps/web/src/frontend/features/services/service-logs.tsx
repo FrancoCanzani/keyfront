@@ -1,3 +1,4 @@
+import { useMemo } from "react";
 import { useSuspenseQuery } from "@tanstack/react-query";
 import { getRouteApi } from "@tanstack/react-router";
 import {
@@ -119,12 +120,21 @@ export function ServiceLogsPage() {
   const { data: service } = useSuspenseQuery(serviceQuery(serviceId));
   const { data: logs } = useSuspenseQuery(logsQuery(serviceId));
 
-  const methods = [...new Set(logs.map((entry) => entry.method))].sort();
-  const filtered = logs.filter(
-    (entry) =>
-      matchesStatus(entry.status, status) &&
-      (method === "all" || entry.method === method) &&
-      (key === "" || entry.keyPrefix.startsWith(key)),
+  const methods = useMemo(
+    () => [...new Set(logs.map((entry) => entry.method))].sort(),
+    [logs],
+  );
+  // stable reference or useReactTable re-renders forever (its data auto-reset
+  // fires on every new array identity)
+  const filtered = useMemo(
+    () =>
+      logs.filter(
+        (entry) =>
+          matchesStatus(entry.status, status) &&
+          (method === "all" || entry.method === method) &&
+          (key === "" || entry.keyPrefix.startsWith(key)),
+      ),
+    [logs, status, method, key],
   );
 
   const table = useReactTable({

@@ -36,10 +36,16 @@ export function UserMenu({
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end" className="min-w-52 w-56 p-1 text-xs">
         <DropdownMenuLabel className="grid gap-0.5 px-2 py-1 font-normal">
-          <span className="truncate text-sm">{user.name}</span>
-          <span className="truncate text-xs text-muted-foreground">
-            {user.email}
-          </span>
+          {user.name && user.name !== user.email ? (
+            <>
+              <span className="truncate text-sm">{user.name}</span>
+              <span className="truncate text-xs text-muted-foreground">
+                {user.email}
+              </span>
+            </>
+          ) : (
+            <span className="truncate text-sm">{user.email}</span>
+          )}
         </DropdownMenuLabel>
         <DropdownMenuSeparator />
         <DropdownMenuItem asChild className="min-h-7 px-2 py-1 font-normal">

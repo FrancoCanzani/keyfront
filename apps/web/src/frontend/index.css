@@ -186,7 +186,9 @@
         @apply select-none;
     }
 
-    :is(button, a):focus-visible {
+    /* menu items get DOM focus on hover (radix roving focus); their own
+       focus:bg highlight applies, the page-level ring must not */
+    :is(button, a):focus-visible:not([role="menuitem"]) {
         @apply outline-none ring-2 ring-ring/40 ring-offset-2 ring-offset-background;
     }
 
