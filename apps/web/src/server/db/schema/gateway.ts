@@ -107,6 +107,62 @@ export const apiKeys = pgTable(
   (t) => [index("api_keys_consumer_id_idx").on(t.consumerId)],
 );
 
+export const apiSpecs = pgTable(
+  "api_specs",
+  {
+    id: text("id")
+      .primaryKey()
+      .$defaultFn(() => crypto.randomUUID()),
+    serviceId: text("service_id")
+      .notNull()
+      .references(() => services.id, { onDelete: "cascade" }),
+    source: text("source").notNull(),
+    sourceUrl: text("source_url"),
+    // sha256 of the raw uploaded text, for change detection on re-sync
+    sourceHash: text("source_hash").notNull(),
+    openapiVersion: text("openapi_version").notNull(),
+    title: text("title"),
+    specVersion: text("spec_version"),
+    // normalized OpenAPI 3.x JSON (2.0 upgraded at ingest)
+    document: jsonb("document").notNull(),
+    warnings: jsonb("warnings").$type<string[]>(),
+    createdAt: timestamp("created_at").notNull().defaultNow(),
+  },
+  (t) => [index("api_specs_service_id_idx").on(t.serviceId)],
+);
+
+// stable per-service operation identity: upserted on (service, method, path)
+// across spec revisions so request_logs links survive re-uploads
+export const apiOperations = pgTable(
+  "api_operations",
+  {
+    id: text("id")
+      .primaryKey()
+      .$defaultFn(() => crypto.randomUUID()),
+    serviceId: text("service_id")
+      .notNull()
+      .references(() => services.id, { onDelete: "cascade" }),
+    operationId: text("operation_id").notNull(),
+    method: text("method").notNull(),
+    pathTemplate: text("path_template").notNull(),
+    // path split on "/", params collapsed to "{}", for log matching
+    segments: jsonb("segments").$type<string[]>().notNull(),
+    summary: text("summary"),
+    tags: jsonb("tags").$type<string[]>(),
+    deprecated: boolean("deprecated").notNull().default(false),
+    createdAt: timestamp("created_at").notNull().defaultNow(),
+    updatedAt: timestamp("updated_at").notNull().defaultNow(),
+  },
+  (t) => [
+    index("api_operations_service_id_idx").on(t.serviceId),
+    uniqueIndex("api_operations_service_method_path_idx").on(
+      t.serviceId,
+      t.method,
+      t.pathTemplate,
+    ),
+  ],
+);
+
 export const requestLogs = pgTable(
   "request_logs",
   {
@@ -115,6 +171,9 @@ export const requestLogs = pgTable(
       .notNull()
       .references(() => services.id, { onDelete: "cascade" }),
     keyId: text("key_id").references(() => apiKeys.id, {
+      onDelete: "set null",
+    }),
+    operationId: text("operation_id").references(() => apiOperations.id, {
       onDelete: "set null",
     }),
     ts: timestamp("ts").notNull(),

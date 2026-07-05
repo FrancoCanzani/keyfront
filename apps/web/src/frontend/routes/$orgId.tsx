@@ -1,5 +1,5 @@
 import { DashboardShell } from "@/components/dashboard-shell";
-import { orgInfoQuery } from "@/lib/gateway-queries";
+import { orgInfoQuery } from "@/lib/organization-queries";
 import { getOrganizationId, setOrganizationId } from "@/lib/org-api";
 import { authClient } from "@/lib/auth-client";
 import {

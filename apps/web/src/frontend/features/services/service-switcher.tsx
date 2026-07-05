@@ -40,7 +40,7 @@ export function ServiceSwitcher({
       aria-label="Service context"
       className="font-data flex min-w-0 flex-wrap items-center gap-1.5 text-xs"
     >
-      <span className="text-muted-foreground">Overview</span>
+      <span className="text-muted-foreground">Usage</span>
       <span className="text-muted-foreground">/</span>
       <DropdownMenu>
         <DropdownMenuTrigger asChild>

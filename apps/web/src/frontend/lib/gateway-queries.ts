@@ -1,43 +1,59 @@
 import { queryOptions } from "@tanstack/react-query";
 import { client } from "./rpc";
 
-export const orgInfoQuery = (orgId: string) =>
-  queryOptions({
-    queryKey: ["organization-info", orgId],
-    queryFn: async () => {
-      const res = await client.api.organization.info.$get();
-      if (!res.ok) {
-        throw Object.assign(new Error("Failed to load organization"), {
-          status: res.status,
-        });
-      }
-      return res.json();
-    },
-    staleTime: 60_000,
-    retry: false,
-  });
+export type UsageSearch = {
+  range?: "24h" | "7d" | "30d";
+  key?: string;
+  consumer?: string;
+};
 
-export const usageQuery = (serviceId: string, range: "24h" | "7d" | "30d") =>
+export const usageQuery = (serviceId: string, search: UsageSearch = {}) =>
   queryOptions({
-    queryKey: ["usage", serviceId, range],
+    queryKey: ["usage", serviceId, search],
     queryFn: async () => {
-      const res = await client.api.usage.$get({ query: { serviceId, range } });
+      const res = await client.api.usage.$get({
+        query: {
+          serviceId,
+          range: search.range ?? "7d",
+          key: search.key ?? "",
+          consumer: search.consumer ?? "all",
+        },
+      });
       if (!res.ok) throw new Error("Failed to load usage");
       return res.json();
     },
-    // drain flushes every 30s; keep the page as fresh as the data can be
     refetchInterval: 30_000,
   });
 
-export const logsQuery = (serviceId: string) =>
+export type LogsSearch = {
+  page?: number;
+  limit?: number;
+  status?: "all" | "2xx" | "4xx" | "5xx";
+  method?: string;
+  key?: string;
+  sort?: "ts" | "status" | "ms" | "method" | "path";
+  order?: "asc" | "desc";
+};
+
+export const logsQuery = (serviceId: string, search: LogsSearch = {}) =>
   queryOptions({
-    queryKey: ["logs", serviceId],
+    queryKey: ["logs", serviceId, search],
     queryFn: async () => {
-      const res = await client.api.logs.$get({ query: { serviceId } });
+      const res = await client.api.logs.$get({
+        query: {
+          serviceId,
+          page: String(search.page ?? 1),
+          limit: String(search.limit ?? 50),
+          status: search.status ?? "all",
+          method: search.method ?? "all",
+          key: search.key ?? "",
+          sort: search.sort ?? "ts",
+          order: search.order ?? "desc",
+        },
+      });
       if (!res.ok) throw new Error("Failed to load recent requests");
       return res.json();
     },
-    refetchInterval: 10_000,
   });
 
 export const servicesQuery = queryOptions({
@@ -85,6 +101,16 @@ export const keysQuery = (serviceId: string) =>
     queryFn: async () => {
       const res = await client.api.keys.$get({ query: { serviceId } });
       if (!res.ok) throw new Error("Failed to load keys");
+      return res.json();
+    },
+  });
+
+export const specQuery = (serviceId: string) =>
+  queryOptions({
+    queryKey: ["spec", serviceId],
+    queryFn: async () => {
+      const res = await client.api.specs.$get({ query: { serviceId } });
+      if (!res.ok) throw new Error("Failed to load API reference");
       return res.json();
     },
   });

@@ -43,6 +43,13 @@
       "when": 1783244555543,
       "tag": "0005_tiresome_the_renegades",
       "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "7",
+      "when": 1783273545934,
+      "tag": "0006_grey_talon",
+      "breakpoints": true
     }
   ]
 }

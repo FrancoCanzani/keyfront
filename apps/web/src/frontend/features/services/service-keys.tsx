@@ -1,26 +1,11 @@
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { useForm } from "@tanstack/react-form";
 import { useMutation, useQueryClient, useSuspenseQuery } from "@tanstack/react-query";
 import { getRouteApi, Link } from "@tanstack/react-router";
-import {
-  createColumnHelper,
-  getCoreRowModel,
-  useReactTable,
-} from "@tanstack/react-table";
-import type { InferResponseType } from "hono/client";
+import { getCoreRowModel, useReactTable } from "@tanstack/react-table";
 import { EyeIcon, EyeOffIcon } from "lucide-react";
 import { toast } from "sonner";
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-  AlertDialogTrigger,
-} from "@/components/ui/alert-dialog";
+import { SectionHeading } from "@/components/section-heading";
 import { Button } from "@/components/ui/button";
 import { DataTable } from "@/components/ui/data-table";
 import {
@@ -53,6 +38,10 @@ import {
   FormFieldLabel,
 } from "@/components/form-layout";
 import {
+  createKeysColumns,
+  KEYS_COL_WIDTHS,
+} from "@/features/services/keys/columns";
+import {
   consumersQuery,
   keysQuery,
   plansQuery,
@@ -62,10 +51,7 @@ import { client } from "@/lib/rpc";
 
 const route = getRouteApi("/$orgId/services/$serviceId/keys");
 
-type ApiKeyRow = InferResponseType<typeof client.api.keys.$get, 200>[number];
 type IssuedKey = { key: string };
-
-const columnHelper = createColumnHelper<ApiKeyRow>();
 
 export function ServiceKeysPage() {
   const { orgId, serviceId } = route.useParams();
@@ -102,7 +88,9 @@ export function ServiceKeysPage() {
       return res.json();
     },
     onSuccess: (key) => {
-      toast.success(key.enabled ? `Key ${key.prefix} resumed` : `Key ${key.prefix} paused`);
+      toast.success(
+        key.enabled ? `Key ${key.prefix} resumed` : `Key ${key.prefix} paused`,
+      );
       queryClient.invalidateQueries({ queryKey: ["keys", serviceId] });
     },
     onError: (error) => toast.error(error.message),
@@ -125,167 +113,25 @@ export function ServiceKeysPage() {
     onError: (error) => toast.error(error.message),
   });
 
-  const columns = [
-    columnHelper.accessor("prefix", {
-      header: () => <span className="px-2">Key</span>,
-      cell: (info) => (
-        <span className="flex items-center gap-1.5 px-2">
-          <code className="font-mono text-xs tabular-nums">
-            {info.getValue()}
-          </code>
-          {info.row.original.environment === "test" ? (
-            <span className="rounded border px-1 py-px text-[10px] text-muted-foreground">
-              test
-            </span>
-          ) : null}
-        </span>
-      ),
-    }),
-    columnHelper.accessor("name", {
-      header: () => <span className="px-2">Name</span>,
-      cell: (info) => (
-        <span className="px-2">
-          {info.getValue() ?? <span className="text-muted-foreground">—</span>}
-        </span>
-      ),
-    }),
-    columnHelper.accessor("consumerExternalRef", {
-      header: () => <span className="px-2">Consumer</span>,
-      cell: (info) => (
-        <span className="px-2">
-          {info.getValue() ?? info.row.original.consumerId.slice(0, 8)}
-        </span>
-      ),
-    }),
-    columnHelper.accessor("planName", {
-      header: () => <span className="px-2">Plan</span>,
-      cell: (info) => <span className="px-2">{info.getValue()}</span>,
-    }),
-    columnHelper.accessor("status", {
-      header: () => <span className="px-2">Status</span>,
-      cell: (info) => {
-        const { enabled } = info.row.original;
-        if (info.getValue() !== "active") {
-          return (
-            <span className="px-2 text-xs font-medium text-muted-foreground line-through">
-              {info.getValue()}
-            </span>
-          );
-        }
-        return enabled ? (
-          <span className="px-2 text-xs font-medium text-green-700">active</span>
-        ) : (
-          <span className="px-2 text-xs font-medium text-[#ec835a]">paused</span>
-        );
-      },
-    }),
-    columnHelper.accessor("lastUsedAt", {
-      header: () => <span className="px-2">Last used</span>,
-      cell: (info) => (
-        <span className="px-2 font-mono text-xs text-muted-foreground tabular-nums">
-          {info.getValue()
-            ? new Date(info.getValue() as string).toLocaleString()
-            : "Never"}
-        </span>
-      ),
-    }),
-    columnHelper.accessor("expiresAt", {
-      header: () => <span className="px-2">Expires</span>,
-      cell: (info) => {
-        const value = info.getValue();
-        if (!value) {
-          return <span className="px-2 text-xs text-muted-foreground">Never</span>;
-        }
-        const expired = new Date(value as string).getTime() < Date.now();
-        return (
-          <span
-            className={
-              expired
-                ? "px-2 font-mono text-xs font-medium text-[#d03b3b] tabular-nums"
-                : "px-2 font-mono text-xs text-muted-foreground tabular-nums"
-            }
-          >
-            {expired ? "Expired " : ""}
-            {new Date(value as string).toLocaleDateString()}
-          </span>
-        );
-      },
-    }),
-    columnHelper.display({
-      id: "actions",
-      cell: (info) =>
-        info.row.original.status === "active" ? (
-          <div className="flex justify-end gap-1">
-            <Button
-              variant="ghost"
-              size="sm"
-              disabled={toggleKey.isPending}
-              onClick={() =>
-                toggleKey.mutate({
-                  id: info.row.original.id,
-                  enabled: !info.row.original.enabled,
-                })
-              }
-            >
-              {info.row.original.enabled ? "Pause" : "Resume"}
-            </Button>
-            <AlertDialog>
-              <AlertDialogTrigger asChild>
-                <Button variant="ghost" size="sm" disabled={rotateKey.isPending}>
-                  Rotate
-                </Button>
-              </AlertDialogTrigger>
-              <AlertDialogContent>
-                <AlertDialogHeader>
-                  <AlertDialogTitle>
-                    Rotate {info.row.original.prefix}?
-                  </AlertDialogTitle>
-                  <AlertDialogDescription>
-                    A new key is issued with the same consumer, plan and
-                    expiry. The old key stops working within seconds, so make
-                    sure whoever uses it is ready to swap.
-                  </AlertDialogDescription>
-                </AlertDialogHeader>
-                <AlertDialogFooter>
-                  <AlertDialogCancel>Cancel</AlertDialogCancel>
-                  <AlertDialogAction
-                    onClick={() => rotateKey.mutate(info.row.original.id)}
-                  >
-                    Rotate key
-                  </AlertDialogAction>
-                </AlertDialogFooter>
-              </AlertDialogContent>
-            </AlertDialog>
-            <AlertDialog>
-              <AlertDialogTrigger asChild>
-                <Button variant="ghost" size="sm" disabled={revokeKey.isPending}>
-                  Revoke
-                </Button>
-              </AlertDialogTrigger>
-              <AlertDialogContent>
-                <AlertDialogHeader>
-                  <AlertDialogTitle>
-                    Revoke {info.row.original.prefix}?
-                  </AlertDialogTitle>
-                  <AlertDialogDescription>
-                    Requests with this key start failing within the gateway's
-                    cache TTL. This can't be undone.
-                  </AlertDialogDescription>
-                </AlertDialogHeader>
-                <AlertDialogFooter>
-                  <AlertDialogCancel>Cancel</AlertDialogCancel>
-                  <AlertDialogAction
-                    onClick={() => revokeKey.mutate(info.row.original.id)}
-                  >
-                    Revoke key
-                  </AlertDialogAction>
-                </AlertDialogFooter>
-              </AlertDialogContent>
-            </AlertDialog>
-          </div>
-        ) : null,
-    }),
-  ];
+  const columns = useMemo(
+    () =>
+      createKeysColumns({
+        onToggle: (input) => toggleKey.mutate(input),
+        onRotate: (id) => rotateKey.mutate(id),
+        onRevoke: (id) => revokeKey.mutate(id),
+        togglePending: toggleKey.isPending,
+        rotatePending: rotateKey.isPending,
+        revokePending: revokeKey.isPending,
+      }),
+    [
+      rotateKey.isPending,
+      rotateKey.mutate,
+      revokeKey.isPending,
+      revokeKey.mutate,
+      toggleKey.isPending,
+      toggleKey.mutate,
+    ],
+  );
 
   const table = useReactTable({
     data: keys,
@@ -293,30 +139,50 @@ export function ServiceKeysPage() {
     getCoreRowModel: getCoreRowModel(),
   });
 
+  if (keys.length === 0) {
+    return (
+      <div className="w-full min-w-0 text-xs">
+        <section className="grid gap-5">
+          <SectionHeading
+            title="Keys"
+            description="API keys issued to consumers on this service."
+          />
+          <Empty className="p-4 md:p-4">
+            <EmptyHeader>
+              <EmptyTitle className="text-sm">No keys yet</EmptyTitle>
+              <EmptyDescription className="text-xs">
+                Add a consumer, then issue them a key.
+              </EmptyDescription>
+            </EmptyHeader>
+            <EmptyContent>
+              <div className="flex items-center gap-2">
+                <AddConsumerDialog serviceId={serviceId} />
+                <IssueKeyDialog
+                  orgId={orgId}
+                  serviceId={serviceId}
+                  onIssued={setIssuedKey}
+                />
+              </div>
+            </EmptyContent>
+          </Empty>
+        </section>
+        <IssuedKeyDialog
+          issuedKey={issuedKey}
+          onClose={() => setIssuedKey(null)}
+        />
+      </div>
+    );
+  }
+
   return (
-    <div className="space-y-6">
-      {keys.length === 0 ? (
-        <Empty>
-          <EmptyHeader>
-            <EmptyTitle>No keys yet</EmptyTitle>
-            <EmptyDescription>
-              Add a consumer, then issue them a key.
-            </EmptyDescription>
-          </EmptyHeader>
-          <EmptyContent>
-            <div className="flex items-center gap-2">
-              <AddConsumerDialog serviceId={serviceId} />
-              <IssueKeyDialog
-                orgId={orgId}
-                serviceId={serviceId}
-                onIssued={setIssuedKey}
-              />
-            </div>
-          </EmptyContent>
-        </Empty>
-      ) : (
-        <>
-          <div className="flex items-center justify-end gap-2">
+    <div className="w-full min-w-0 text-xs">
+      <section className="grid gap-3">
+        <div className="flex flex-wrap items-center justify-between gap-4">
+          <SectionHeading
+            title="Keys"
+            description="API keys issued to consumers on this service."
+          />
+          <div className="flex shrink-0 gap-2">
             <AddConsumerDialog serviceId={serviceId} />
             <IssueKeyDialog
               orgId={orgId}
@@ -324,9 +190,16 @@ export function ServiceKeysPage() {
               onIssued={setIssuedKey}
             />
           </div>
-          <DataTable table={table} />
-        </>
-      )}
+        </div>
+        <DataTable
+          variant="plain"
+          size="sm"
+          table={table}
+          colWidths={KEYS_COL_WIDTHS}
+          minWidth="52rem"
+          maxHeight="none"
+        />
+      </section>
 
       <IssuedKeyDialog
         issuedKey={issuedKey}
@@ -355,7 +228,10 @@ function IssuedKeyDialog({
   }
 
   return (
-    <Dialog open={issuedKey !== null} onOpenChange={(next) => (next ? null : close())}>
+    <Dialog
+      open={issuedKey !== null}
+      onOpenChange={(next) => (next ? null : close())}
+    >
       <DialogContent>
         <DialogHeader>
           <DialogTitle>Key issued</DialogTitle>
@@ -438,7 +314,7 @@ function AddConsumerDialog({ serviceId }: { serviceId: string }) {
       onOpenChange={(next) => (next ? setOpen(true) : close())}
     >
       <DialogTrigger asChild>
-        <Button variant="outline" className="h-8 shrink-0">
+        <Button variant="outline" className="h-7 shrink-0 text-xs">
           Add consumer
         </Button>
       </DialogTrigger>
@@ -561,7 +437,7 @@ function IssueKeyDialog({
       onOpenChange={(next) => (next ? setOpen(true) : close())}
     >
       <DialogTrigger asChild>
-        <Button className="h-8 shrink-0">Issue key</Button>
+        <Button className="h-7 shrink-0 text-xs">Issue key</Button>
       </DialogTrigger>
       <DialogContent>
         <DialogHeader>

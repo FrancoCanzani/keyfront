@@ -3,6 +3,7 @@ import { useMutation, useSuspenseQuery } from "@tanstack/react-query";
 import { getRouteApi } from "@tanstack/react-router";
 import type { InferResponseType } from "hono/client";
 import { toast } from "sonner";
+import { SectionHeading } from "@/components/section-heading";
 import {
   Select,
   SelectContent,
@@ -332,19 +333,4 @@ function formatResponseJson(result: TestResult): string {
   }
 
   return JSON.stringify(payload, null, 2);
-}
-
-function SectionHeading({
-  title,
-  description,
-}: {
-  title: string;
-  description: string;
-}) {
-  return (
-    <h2 className="m-0 text-xs leading-snug">
-      <span className="font-medium text-foreground">{title}.</span>{" "}
-      <span className="text-muted-foreground">{description}</span>
-    </h2>
-  );
 }

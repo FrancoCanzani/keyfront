@@ -61,7 +61,7 @@ function TooltipRow({ label, value }: { label: string; value: string }) {
   return (
     <button
       type="button"
-      className="flex w-full items-center px-3 py-1.5 text-left text-sm hover:bg-muted/60"
+      className="flex w-full items-center px-2 py-1 text-left text-xs hover:bg-muted/60"
       onClick={(e) => {
         e.stopPropagation();
         navigator.clipboard.writeText(value);
@@ -70,12 +70,12 @@ function TooltipRow({ label, value }: { label: string; value: string }) {
         setTimeout(() => setCopied(false), 1000);
       }}
     >
-      <span className="w-28 shrink-0 truncate text-muted-foreground">
+      <span className="w-20 shrink-0 truncate text-xxs text-muted-foreground">
         {label}
       </span>
       <span
         className={cn(
-          "ml-2 min-w-0 truncate font-data tabular-nums",
+          "ml-1.5 min-w-0 truncate font-data text-xxs tabular-nums",
           copied ? "text-[#15803d]" : "text-foreground",
         )}
       >
@@ -106,10 +106,10 @@ export function TimestampInfo({
       <TooltipTrigger asChild>
         <button
           type="button"
-          className={cn(
-            "font-data tabular-nums underline decoration-dotted decoration-border underline-offset-2 hover:text-foreground",
-            className,
-          )}
+      className={cn(
+        "font-data tabular-nums underline decoration-dotted decoration-border underline-offset-2 hover:text-foreground",
+        className ?? "text-xs",
+      )}
           onClick={(e) => e.stopPropagation()}
         >
           {formatDisplay(value, displayType)}
@@ -119,10 +119,10 @@ export function TimestampInfo({
         side={side}
         align="start"
         sideOffset={4}
-        className="w-auto min-w-[17.5rem] border border-border bg-background p-0 text-sm text-foreground shadow-md"
+        className="w-auto min-w-[13rem] border border-border bg-background p-0 text-xs text-foreground shadow-md"
         onClick={(e) => e.stopPropagation()}
       >
-        <div className="py-1">
+        <div className="py-0.5">
           <TooltipRow label="UTC" value={utc} />
           <TooltipRow label={localTimezone} value={local} />
           <TooltipRow label="Relative" value={relative} />

@@ -13,7 +13,9 @@
   "dependencies": {
     "fumadocs-core": "latest",
     "fumadocs-mdx": "latest",
+    "fumadocs-openapi": "latest",
     "fumadocs-ui": "latest",
+    "shiki": "latest",
     "next": "latest",
     "react": "latest",
     "react-dom": "latest"

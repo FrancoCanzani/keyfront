@@ -1,7 +1,10 @@
-import { useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
+import {
+  getCoreRowModel,
+  useReactTable,
+} from "@tanstack/react-table";
 import { useSuspenseQuery } from "@tanstack/react-query";
 import { getRouteApi } from "@tanstack/react-router";
-import type { InferResponseType } from "hono/client";
 import { Bar, BarChart, XAxis, YAxis } from "recharts";
 import {
   ChartContainer,
@@ -9,6 +12,8 @@ import {
   ChartTooltipContent,
   type ChartConfig,
 } from "@/components/ui/chart";
+import { SectionHeading } from "@/components/section-heading";
+import { DataTable } from "@/components/ui/data-table";
 import {
   Empty,
   EmptyContent,
@@ -29,15 +34,20 @@ import {
   SheetHeader,
   SheetTitle,
 } from "@/components/ui/sheet";
-import { TimestampInfo } from "@/components/timestamp-info";
+import { Skeleton } from "@/components/ui/skeleton";
+import {
+  createLogsColumns,
+  entryId,
+  LOGS_COL_WIDTHS,
+  type LogEntry,
+  type LogSortField,
+} from "@/features/services/logs/columns";
+import { StatusBadge } from "@/features/services/logs/status-badge";
 import { GatewaySnippets } from "@/features/services/gateway-snippets";
 import { logsQuery, serviceQuery } from "@/lib/gateway-queries";
-import type { client } from "@/lib/rpc";
 import { cn } from "@/lib/utils";
 
 const route = getRouteApi("/$orgId/services/$serviceId/logs");
-
-type LogEntry = InferResponseType<typeof client.api.logs.$get, 200>[number];
 
 const STATUS_FILTERS = [
   { value: "all", label: "All" },
@@ -46,19 +56,14 @@ const STATUS_FILTERS = [
   { value: "5xx", label: "5xx" },
 ] as const;
 
-type StatusFilter = (typeof STATUS_FILTERS)[number]["value"];
-
 const SUCCESS_GREEN = "#15803d";
 
 const STATUS_TEXT: Record<number, string> = {
   200: "OK",
   201: "Created",
   204: "No Content",
-  301: "Moved Permanently",
-  302: "Found",
   400: "Bad Request",
   401: "Unauthorized",
-  402: "Payment Required",
   403: "Forbidden",
   404: "Not Found",
   429: "Too Many Requests",
@@ -75,7 +80,7 @@ const chartConfig = {
 } satisfies ChartConfig;
 
 const controlHeight =
-  "h-8 min-h-8 box-border shrink-0 py-0 text-sm leading-8";
+  "h-7 min-h-7 box-border shrink-0 py-0 text-xs leading-7";
 
 const pillClass = cn(
   "inline-flex items-center justify-center rounded border border-border bg-muted/40 px-2.5 font-normal transition-colors hover:bg-muted/60 disabled:pointer-events-none disabled:opacity-50",
@@ -83,121 +88,180 @@ const pillClass = cn(
 );
 
 const fieldClass = cn(
-  "min-w-0 rounded border border-border bg-muted/40 px-2 font-data text-sm outline-none placeholder:text-muted-foreground focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50",
+  "min-w-0 rounded border border-border bg-muted/40 px-2 font-data text-xs outline-none placeholder:text-muted-foreground focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50",
   controlHeight,
 );
 
-function matchesStatus(status: number, filter: StatusFilter) {
-  switch (filter) {
-    case "all":
-      return true;
-    case "2xx":
-      return status < 400;
-    case "4xx":
-      return status >= 400 && status < 500;
-    case "5xx":
-      return status >= 500;
-    default: {
-      const _exhaustive: never = filter;
-      return _exhaustive;
-    }
-  }
-}
-
-const statusBadgeClassName = (status: number) =>
-  status >= 500
-    ? "bg-[#d03b3b]/10 text-[#d03b3b]"
-    : status >= 400
-      ? "bg-[#ec835a]/10 text-[#ec835a]"
-      : "bg-[#15803d]/10 text-[#15803d]";
-
-const entryId = (entry: LogEntry) =>
-  `${entry.ts}-${entry.method}-${entry.path}-${entry.status}-${entry.ms}`;
-
-function formatVolumeTime(ts: number) {
-  return new Date(ts).toLocaleTimeString([], {
-    hour: "2-digit",
-    minute: "2-digit",
-  });
-}
-
-function buildVolumeSeries(entries: LogEntry[]) {
-  if (entries.length < 2) return [];
-  const min = entries[entries.length - 1].ts;
-  const max = entries[0].ts;
-  const span = Math.max(max - min, 60_000);
-  const slotCount = 40;
-  const slotSize = span / slotCount;
-
-  const slots = Array.from({ length: slotCount }, (_, i) => ({
-    ts: min + i * slotSize,
-    ok: 0,
-    err4: 0,
-    err5: 0,
-  }));
-  for (const entry of entries) {
-    const index = Math.min(
-      Math.floor((entry.ts - min) / slotSize),
-      slotCount - 1,
-    );
-    if (entry.status >= 500) slots[index].err5 += 1;
-    else if (entry.status >= 400) slots[index].err4 += 1;
-    else slots[index].ok += 1;
-  }
-  return slots.map((slot) => ({
-    ...slot,
-    label: formatVolumeTime(slot.ts),
-  }));
+export function ServiceLogsSkeleton() {
+  return (
+    <div className="mx-auto w-full max-w-4xl text-xs">
+      <div className="grid gap-10">
+        <section className="grid gap-3">
+          <Skeleton className="h-4 w-72" />
+          <div className="flex flex-wrap gap-2">
+            {Array.from({ length: 4 }).map((_, index) => (
+              <Skeleton key={index} className="h-7 w-10 rounded" />
+            ))}
+            <Skeleton className="h-7 w-28 rounded" />
+            <Skeleton className="h-7 w-44 rounded" />
+          </div>
+        </section>
+        <section className="grid gap-3">
+          <Skeleton className="h-4 w-56" />
+          <Skeleton className="h-20 w-full rounded" />
+        </section>
+        <section className="grid gap-3">
+          <div className="overflow-hidden rounded border border-border">
+            <div className="border-b border-border px-2 py-2">
+              <div className="flex gap-4">
+                {LOGS_COL_WIDTHS.map((width) => (
+                  <Skeleton key={width} className="h-3 flex-1" style={{ maxWidth: width }} />
+                ))}
+              </div>
+            </div>
+            {Array.from({ length: 8 }).map((_, index) => (
+              <div
+                key={index}
+                className="flex gap-4 border-b border-border/50 px-2 py-2 last:border-b-0"
+              >
+                {LOGS_COL_WIDTHS.map((width) => (
+                  <Skeleton key={width} className="h-3 flex-1" style={{ maxWidth: width }} />
+                ))}
+              </div>
+            ))}
+          </div>
+        </section>
+      </div>
+    </div>
+  );
 }
 
 export function ServiceLogsPage() {
   const { serviceId } = route.useParams();
-  const { status, method, key } = route.useSearch();
+  const search = route.useSearch();
   const navigate = route.useNavigate();
   const { data: service } = useSuspenseQuery(serviceQuery(serviceId));
-  const [live, setLive] = useState(true);
   const [selected, setSelected] = useState<LogEntry | null>(null);
-  const { data: logs } = useSuspenseQuery({
-    ...logsQuery(serviceId),
-    refetchInterval: live ? 5_000 : false,
+
+  const { data } = useSuspenseQuery({
+    ...logsQuery(serviceId, search),
+    refetchInterval: search.page === 1 ? 5_000 : false,
   });
 
-  const methods = useMemo(
-    () => [...new Set(logs.map((entry) => entry.method))].sort(),
-    [logs],
-  );
-  const filtered = useMemo(
-    () =>
-      logs.filter(
-        (entry) =>
-          matchesStatus(entry.status, status) &&
-          (method === "all" || entry.method === method) &&
-          (key === "" || entry.keyPrefix.startsWith(key)),
-      ),
-    [logs, status, method, key],
-  );
-  const volume = useMemo(() => buildVolumeSeries(filtered), [filtered]);
+  const { entries, total, page, limit, methods, volume } = data;
+  const pageCount = Math.max(1, Math.ceil(total / limit));
+  const rangeStart = total === 0 ? 0 : (page - 1) * limit + 1;
+  const rangeEnd = Math.min(page * limit, total);
+
+  const separatorAfter = useMemo(() => {
+    for (let index = 0; index < entries.length - 1; index += 1) {
+      if (entries[index].live && !entries[index + 1]?.live) return index;
+    }
+    return -1;
+  }, [entries]);
 
   const setSearch = (
-    patch: Partial<{ status: StatusFilter; method: string; key: string }>,
+    patch: Partial<typeof search>,
+    resetPage = patch.page === undefined,
   ) =>
     navigate({
-      search: (previous) => ({ ...previous, ...patch }),
+      search: (previous) => ({
+        ...previous,
+        ...patch,
+        ...(resetPage ? { page: 1 } : {}),
+      }),
       replace: true,
     });
 
-  if (logs.length === 0) {
+  const toggleSort = useCallback(
+    (field: LogSortField) => {
+      navigate({
+        search: (previous) => ({
+          ...previous,
+          page: 1,
+          sort: field,
+          order:
+            previous.sort === field && previous.order === "desc"
+              ? "asc"
+              : "desc",
+        }),
+        replace: true,
+      });
+    },
+    [navigate],
+  );
+
+  const columns = useMemo(
+    () =>
+      createLogsColumns({
+        sort: search.sort,
+        order: search.order,
+        onSort: toggleSort,
+      }),
+    [search.sort, search.order, toggleSort],
+  );
+
+  const table = useReactTable({
+    data: entries,
+    columns,
+    getCoreRowModel: getCoreRowModel(),
+  });
+
+  useEffect(() => {
+    const onKeyDown = (event: KeyboardEvent) => {
+      const target = event.target;
+      if (
+        target instanceof HTMLInputElement ||
+        target instanceof HTMLTextAreaElement ||
+        target instanceof HTMLSelectElement
+      ) {
+        return;
+      }
+      if (entries.length === 0) return;
+
+      if (event.key === "Escape") {
+        setSelected(null);
+        return;
+      }
+
+      const currentIndex =
+        selected === null
+          ? -1
+          : entries.findIndex(
+              (entry) => entryId(entry) === entryId(selected),
+            );
+
+      if (event.key === "j" || event.key === "ArrowDown") {
+        event.preventDefault();
+        const nextIndex =
+          currentIndex < 0 ? 0 : Math.min(currentIndex + 1, entries.length - 1);
+        setSelected(entries[nextIndex]);
+      }
+
+      if (event.key === "k" || event.key === "ArrowUp") {
+        event.preventDefault();
+        const nextIndex =
+          currentIndex < 0 ? 0 : Math.max(currentIndex - 1, 0);
+        setSelected(entries[nextIndex]);
+      }
+    };
+
+    window.addEventListener("keydown", onKeyDown);
+    return () => window.removeEventListener("keydown", onKeyDown);
+  }, [entries, selected]);
+
+  if (total === 0 && search.status === "all" && search.method === "all" && search.key === "") {
     return (
-      <div className="mx-auto w-full max-w-4xl text-sm">
+      <div className="mx-auto w-full max-w-4xl text-xs">
         <section className="grid gap-5">
           <SectionHeading
             title="Logs"
-            description="Last 100 requests through the gateway, including rejections."
+            description="Request history for the last 30 days."
           />
           <Empty className="p-4 md:p-4">
             <EmptyHeader>
               <EmptyTitle className="text-sm">No logs yet</EmptyTitle>
-              <EmptyDescription className="text-sm">
+              <EmptyDescription className="text-xs">
                 Send your first request to see it here.
               </EmptyDescription>
             </EmptyHeader>
@@ -211,34 +275,17 @@ export function ServiceLogsPage() {
   }
 
   return (
-    <div className="mx-auto w-full max-w-4xl text-sm">
+    <div className="mx-auto w-full max-w-4xl text-xs">
       <div className="grid gap-10">
         <section className="grid gap-3">
-          <div className="flex flex-wrap items-start justify-between gap-3">
+          <div className="flex items-center justify-between gap-4">
             <SectionHeading
               title="Logs"
-              description="Last 100 requests through the gateway."
+              description="Request history for the last 30 days."
             />
-            <div className="flex items-center gap-3">
-              <span className="font-data text-sm text-muted-foreground tabular-nums">
-                {filtered.length} of {logs.length}
-              </span>
-              <button
-                type="button"
-                className={cn(pillClass, "gap-1.5 px-2.5")}
-                onClick={() => setLive((current) => !current)}
-              >
-                <span
-                  className={cn(
-                    "size-1.5 rounded-full",
-                    live
-                      ? "animate-pulse bg-[#15803d]"
-                      : "bg-muted-foreground/40",
-                  )}
-                />
-                {live ? "Live" : "Paused"}
-              </button>
-            </div>
+            <span className="shrink-0 font-data text-xs leading-snug text-muted-foreground tabular-nums">
+              {rangeStart}–{rangeEnd} of {total.toLocaleString()}
+            </span>
           </div>
 
           <div className="flex flex-wrap items-center gap-2">
@@ -249,7 +296,7 @@ export function ServiceLogsPage() {
                   type="button"
                   className={cn(
                     pillClass,
-                    status === item.value &&
+                    search.status === item.value &&
                       "border-foreground/20 bg-muted/60 text-foreground",
                   )}
                   onClick={() => setSearch({ status: item.value })}
@@ -259,7 +306,7 @@ export function ServiceLogsPage() {
               ))}
             </div>
             <Select
-              value={method}
+              value={search.method}
               onValueChange={(value) => setSearch({ method: value })}
             >
               <SelectTrigger
@@ -269,18 +316,18 @@ export function ServiceLogsPage() {
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="all" className="font-data text-sm">
+                <SelectItem value="all" className="font-data text-xs">
                   All methods
                 </SelectItem>
                 {methods.map((item) => (
-                  <SelectItem key={item} value={item} className="font-data text-sm">
+                  <SelectItem key={item} value={item} className="font-data text-xs">
                     {item}
                   </SelectItem>
                 ))}
               </SelectContent>
             </Select>
             <input
-              value={key}
+              value={search.key}
               onChange={(e) => setSearch({ key: e.target.value })}
               placeholder="Filter by key prefix…"
               className={cn(fieldClass, "w-44")}
@@ -303,7 +350,7 @@ export function ServiceLogsPage() {
                   tickMargin={6}
                   interval="preserveStartEnd"
                   minTickGap={80}
-                  tick={{ fontSize: 14, fontFamily: "var(--font-mono)" }}
+                  tick={{ fontSize: 10, fontFamily: "var(--font-mono)" }}
                 />
                 <YAxis hide />
                 <ChartTooltip content={<ChartTooltipContent />} />
@@ -321,136 +368,72 @@ export function ServiceLogsPage() {
         ) : null}
 
         <section className="grid gap-3">
-          {filtered.length === 0 ? (
+          {entries.length === 0 ? (
             <Empty className="p-4 md:p-4">
               <EmptyHeader>
-                <EmptyDescription className="text-sm">
+                <EmptyDescription className="text-xs">
                   No requests match these filters.
                 </EmptyDescription>
               </EmptyHeader>
             </Empty>
           ) : (
-            <LogsTable
-              rows={filtered}
-              selected={selected}
-              onSelect={setSelected}
-            />
+            <>
+              <DataTable
+                variant="plain"
+                size="sm"
+                table={table}
+                colWidths={LOGS_COL_WIDTHS}
+                onRowClick={setSelected}
+                separator={
+                  separatorAfter >= 0
+                    ? { afterIndex: separatorAfter, label: "Historical" }
+                    : undefined
+                }
+                getRowClassName={(row) =>
+                  cn(
+                    "transition-opacity",
+                    row.original.status >= 500 && "bg-[#d03b3b]/5",
+                    row.original.status >= 400 &&
+                      row.original.status < 500 &&
+                      "bg-[#ec835a]/5",
+                    selected &&
+                      entryId(row.original) !== entryId(selected) &&
+                      "opacity-50",
+                    selected &&
+                      entryId(row.original) === entryId(selected) &&
+                      "bg-muted opacity-100",
+                  )
+                }
+              />
+              <div className="flex items-center justify-between">
+                <span className="font-data text-xxs text-muted-foreground tabular-nums">
+                  Page {page} of {pageCount}
+                </span>
+                <div className="flex items-center gap-1">
+                  <button
+                    type="button"
+                    className={cn(pillClass, "px-2")}
+                    disabled={page <= 1}
+                    onClick={() => setSearch({ page: page - 1 }, false)}
+                  >
+                    Previous
+                  </button>
+                  <button
+                    type="button"
+                    className={cn(pillClass, "px-2")}
+                    disabled={page >= pageCount}
+                    onClick={() => setSearch({ page: page + 1 }, false)}
+                  >
+                    Next
+                  </button>
+                </div>
+              </div>
+            </>
           )}
         </section>
       </div>
 
       <LogDetailSheet entry={selected} onClose={() => setSelected(null)} />
-    </div>
-  );
-}
-
-function LogsTable({
-  rows,
-  selected,
-  onSelect,
-}: {
-  rows: LogEntry[];
-  selected: LogEntry | null;
-  onSelect: (entry: LogEntry) => void;
-}) {
-  return (
-    <div className="overflow-hidden rounded border border-border">
-      <div className="max-h-[calc(100dvh-20rem)] overflow-auto">
-        <table className="w-full table-fixed text-sm">
-          <colgroup>
-            <col className="w-[15%]" />
-            <col className="w-[8%]" />
-            <col className="w-[8%]" />
-            <col className="w-[18%]" />
-            <col className="w-[10%]" />
-            <col className="w-[41%]" />
-          </colgroup>
-          <thead className="sticky top-0 z-10 bg-background">
-            <tr className="border-b border-border">
-              <th className="h-9 px-2 text-left text-sm font-normal text-muted-foreground">
-                Time
-              </th>
-              <th className="h-9 px-2 text-left text-sm font-normal text-muted-foreground">
-                Status
-              </th>
-              <th className="h-9 px-2 text-left text-sm font-normal text-muted-foreground">
-                Method
-              </th>
-              <th className="h-9 px-2 text-left text-sm font-normal text-muted-foreground">
-                Path
-              </th>
-              <th className="h-9 px-2 text-right text-sm font-normal text-muted-foreground">
-                Latency
-              </th>
-              <th className="h-9 px-2 text-left text-sm font-normal text-muted-foreground">
-                Key
-              </th>
-            </tr>
-          </thead>
-          <tbody>
-            {rows.map((entry) => (
-              <tr
-                key={entryId(entry)}
-                tabIndex={0}
-                className={cn(
-                  "cursor-pointer border-0 hover:bg-muted/50",
-                  entry.status >= 500 && "bg-[#d03b3b]/5",
-                  entry.status >= 400 &&
-                    entry.status < 500 &&
-                    "bg-[#ec835a]/5",
-                  selected &&
-                    entryId(entry) === entryId(selected) &&
-                    "bg-muted",
-                )}
-                onClick={() => onSelect(entry)}
-                onKeyDown={(e) => {
-                  if (e.key === "Enter" || e.key === " ") {
-                    e.preventDefault();
-                    onSelect(entry);
-                  }
-                }}
-              >
-                <td className="px-2 py-2 text-muted-foreground">
-                  <TimestampInfo
-                    value={entry.ts}
-                    className="text-sm text-muted-foreground"
-                  />
-                </td>
-                <td className="px-2 py-2">
-                  <span
-                    className={cn(
-                      "inline-flex rounded px-1.5 py-0.5 font-data text-xs tabular-nums",
-                      statusBadgeClassName(entry.status),
-                    )}
-                  >
-                    {entry.status}
-                  </span>
-                </td>
-                <td className="px-2 py-2 font-data">{entry.method}</td>
-                <td
-                  className="max-w-0 px-2 py-2 font-data text-muted-foreground"
-                  title={entry.path}
-                >
-                  <span className="block truncate">{entry.path}</span>
-                </td>
-                <td className="px-2 py-2 text-right font-data text-muted-foreground tabular-nums">
-                  {entry.ms} ms
-                </td>
-                <td
-                  className="max-w-0 px-2 py-2 font-data text-muted-foreground"
-                  title={
-                    entry.keyPrefix === "-" ? undefined : entry.keyPrefix
-                  }
-                >
-                  <span className="block truncate">
-                    {entry.keyPrefix === "-" ? "—" : `${entry.keyPrefix}…`}
-                  </span>
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
     </div>
   );
 }
@@ -479,30 +462,16 @@ function LogDetailSheet({
                   {entry.path}
                 </span>
               </SheetTitle>
-              <div className="text-sm text-muted-foreground">
-                <TimestampInfo
-                  value={entry.ts}
-                  displayType="datetime"
-                  className="text-sm text-muted-foreground"
-                />
-              </div>
             </SheetHeader>
 
             <div className="flex items-center gap-2">
-              <span
-                className={cn(
-                  "inline-flex rounded px-1.5 py-0.5 font-data text-sm tabular-nums",
-                  statusBadgeClassName(entry.status),
-                )}
-              >
-                {entry.status}
-              </span>
-              <span className="text-sm text-muted-foreground">
+              <StatusBadge status={entry.status} />
+              <span className="text-xs text-muted-foreground">
                 {STATUS_TEXT[entry.status] ?? ""}
               </span>
             </div>
 
-            <dl className="grid grid-cols-[6rem_minmax(0,1fr)] gap-x-3 gap-y-2 border-t pt-4 font-data text-sm">
+            <dl className="grid grid-cols-[6rem_minmax(0,1fr)] gap-x-3 gap-y-2 border-t pt-4 font-data text-xs">
               {entry.outcome ? (
                 <>
                   <dt className="text-muted-foreground">Outcome</dt>
@@ -533,27 +502,12 @@ function LogDetailSheet({
               ) : null}
             </dl>
 
-            <pre className="overflow-x-auto rounded border border-border bg-muted/40 p-2.5 font-data text-sm leading-relaxed">
+            <pre className="overflow-x-auto rounded border border-border bg-muted/40 p-2.5 font-data text-xs leading-relaxed">
               {JSON.stringify(entry, null, 2)}
             </pre>
           </>
         ) : null}
       </SheetContent>
     </Sheet>
-  );
-}
-
-function SectionHeading({
-  title,
-  description,
-}: {
-  title: string;
-  description: string;
-}) {
-  return (
-    <h2 className="m-0 text-sm leading-snug">
-      <span className="font-medium text-foreground">{title}.</span>{" "}
-      <span className="text-muted-foreground">{description}</span>
-    </h2>
   );
 }

@@ -11,9 +11,12 @@ export function parseDashboardRoute(pathname: string) {
   const serviceId =
     candidate && !RESERVED_SERVICE_SEGMENTS.has(candidate) ? candidate : null;
 
+  const isOrgAdmin = section === "settings" || section === "team";
+
   return {
     orgId,
     serviceId,
     isServiceDetail: serviceId != null,
+    isOrgAdmin,
   };
 }

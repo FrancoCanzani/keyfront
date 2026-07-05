@@ -2,7 +2,7 @@ import { useState } from "react";
 import { useForm } from "@tanstack/react-form";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useNavigate } from "@tanstack/react-router";
-import type { z } from "zod";
+import { z } from "zod";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import {
@@ -32,6 +32,11 @@ import {
 } from "../../../server/routes/protected/services/schemas";
 
 type CreateService = z.infer<typeof createServiceSchema>;
+type CreateServiceForm = CreateService & { specUrl: string };
+
+const createServiceFormSchema = createServiceSchema.extend({
+  specUrl: z.union([z.literal(""), z.url({ protocol: /^https?$/ })]),
+});
 
 function suggestHostKey(name: string) {
   return name
@@ -47,12 +52,26 @@ export function NewServiceDialog({ orgId }: { orgId: string }) {
   const navigate = useNavigate();
 
   const createService = useMutation({
-    mutationFn: async (value: CreateService) => {
+    mutationFn: async ({ specUrl, ...value }: CreateServiceForm) => {
       const res = await client.api.services.$post({ json: value });
       if (!res.ok) {
         throw new Error(await readApiError(res, "Failed to create service"));
       }
-      return res.json();
+      const service = await res.json();
+      if (specUrl.trim() !== "") {
+        const specRes = await client.api.specs.$post({
+          json: { serviceId: service.id, url: specUrl.trim() },
+        });
+        if (!specRes.ok) {
+          toast.warning(
+            await readApiError(
+              specRes,
+              "Service created, but the spec could not be attached",
+            ),
+          );
+        }
+      }
+      return service;
     },
     onSuccess: async (service) => {
       toast.success("Service created");
@@ -66,8 +85,8 @@ export function NewServiceDialog({ orgId }: { orgId: string }) {
   });
 
   const form = useForm({
-    defaultValues: { name: "", hostKey: "", originUrl: "" },
-    validators: { onSubmit: createServiceSchema },
+    defaultValues: { name: "", hostKey: "", originUrl: "", specUrl: "" },
+    validators: { onSubmit: createServiceFormSchema },
     onSubmit: ({ value }) => createService.mutateAsync(value),
   });
 
@@ -198,6 +217,33 @@ export function NewServiceDialog({ orgId }: { orgId: string }) {
                 />
                 <FormFieldHint id={`${field.name}-hint`}>
                   Where the gateway forwards authenticated traffic.
+                </FormFieldHint>
+                <FormFieldError
+                  id={`${field.name}-error`}
+                  errors={fieldErrors(field)}
+                />
+              </FormFieldGroup>
+            )}
+          </form.Field>
+
+          <form.Field name="specUrl">
+            {(field) => (
+              <FormFieldGroup>
+                <FormFieldLabel htmlFor={field.name}>
+                  OpenAPI spec URL (optional)
+                </FormFieldLabel>
+                <Input
+                  id={field.name}
+                  className={controlClassName}
+                  value={field.state.value}
+                  onBlur={field.handleBlur}
+                  onChange={(e) => field.handleChange(e.target.value)}
+                  placeholder="https://api.acme.com/openapi.json"
+                  {...fieldA11y(field, true)}
+                />
+                <FormFieldHint id={`${field.name}-hint`}>
+                  Powers hosted docs, the playground, and per-endpoint
+                  analytics. You can attach one later.
                 </FormFieldHint>
                 <FormFieldError
                   id={`${field.name}-error`}

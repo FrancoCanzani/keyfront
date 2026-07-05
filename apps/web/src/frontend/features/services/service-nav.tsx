@@ -2,12 +2,12 @@ import { Link } from "@tanstack/react-router";
 import { cn } from "@/lib/utils";
 
 const TABS = [
-  { value: "overview", label: "Overview", to: "/$orgId/services/$serviceId" as const },
+  { value: "usage", label: "Usage", to: "/$orgId/services/$serviceId" as const },
   { value: "plans", label: "Plans", to: "/$orgId/services/$serviceId/plans" as const },
   { value: "keys", label: "Consumers & keys", to: "/$orgId/services/$serviceId/keys" as const },
-  { value: "usage", label: "Usage", to: "/$orgId/services/$serviceId/usage" as const },
   { value: "logs", label: "Logs", to: "/$orgId/services/$serviceId/logs" as const },
   { value: "test", label: "Test", to: "/$orgId/services/$serviceId/test" as const },
+  { value: "reference", label: "Reference", to: "/$orgId/services/$serviceId/reference" as const },
   { value: "settings", label: "Settings", to: "/$orgId/services/$serviceId/settings" as const },
 ] as const;
 
@@ -34,7 +34,7 @@ export function ServiceNav({
           to={item.to}
           params={{ orgId, serviceId }}
           activeOptions={
-            item.value === "overview"
+            item.value === "usage"
               ? { exact: true, includeSearch: false }
               : undefined
           }

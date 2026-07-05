@@ -1,5 +1,5 @@
 import { zValidator } from "@hono/zod-validator";
-import { and, eq, gte, sql } from "drizzle-orm";
+import { and, eq, gte, ilike, sql } from "drizzle-orm";
 import { Hono } from "hono";
 import {
   apiKeys,
@@ -12,11 +12,10 @@ import {
 import { getOrganizationId } from "../../../middleware/auth";
 import { drainUsage } from "../../../lib/usage-drain";
 import type { AppRouteEnv } from "../../../types";
-import { usageQuerySchema } from "./schemas";
+import { usageQuerySchema, type UsageQuery } from "./schemas";
 
 const rangeHours = { "24h": 24, "7d": 7 * 24, "30d": 30 * 24 };
 
-// the cron drain never fires in vite dev; redis being down must not block the charts
 let lastDrainAt = 0;
 
 async function drainOnRead(db: Parameters<typeof drainUsage>[0]) {
@@ -29,12 +28,22 @@ async function drainOnRead(db: Parameters<typeof drainUsage>[0]) {
   }
 }
 
+function usageScope(query: UsageQuery, organizationId: string) {
+  return and(
+    eq(consumers.serviceId, query.serviceId),
+    eq(services.organizationId, organizationId),
+    query.key === "" ? undefined : ilike(apiKeys.prefix, `${query.key}%`),
+    query.consumer === "all" ? undefined : eq(consumers.id, query.consumer),
+  );
+}
+
 export const getUsage = new Hono<AppRouteEnv>().get(
   "/",
   zValidator("query", usageQuerySchema),
   async (c) => {
     const organizationId = getOrganizationId(c);
-    const { serviceId, range } = c.req.valid("query");
+    const query = c.req.valid("query");
+    const { range } = query;
     const db = c.get("db");
 
     await drainOnRead(db);
@@ -47,10 +56,7 @@ export const getUsage = new Hono<AppRouteEnv>().get(
     const sinceParam = sql.param(since, usageRollup.windowStart);
     const monthStartParam = sql.param(monthStart, usageRollup.windowStart);
 
-    const scoped = and(
-      eq(consumers.serviceId, serviceId),
-      eq(services.organizationId, organizationId),
-    );
+    const scoped = usageScope(query, organizationId);
 
     const hourBucket = sql<string>`date_trunc('hour', ${usageRollup.windowStart})`;
     const dayBucket = sql<string>`${usageRollupDaily.day}`;
@@ -95,6 +101,7 @@ export const getUsage = new Hono<AppRouteEnv>().get(
         keyId: apiKeys.id,
         prefix: apiKeys.prefix,
         status: apiKeys.status,
+        consumerId: consumers.id,
         consumerExternalRef: consumers.externalRef,
         planName: plans.name,
         monthlyQuota: plans.monthlyQuota,
@@ -115,6 +122,7 @@ export const getUsage = new Hono<AppRouteEnv>().get(
         apiKeys.id,
         apiKeys.prefix,
         apiKeys.status,
+        consumers.id,
         consumers.externalRef,
         plans.name,
         plans.monthlyQuota,

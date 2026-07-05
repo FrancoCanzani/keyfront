@@ -13,6 +13,8 @@ import { logsRoutes } from "./routes/protected/logs";
 import { plansRoutes } from "./routes/protected/plans";
 import { organizationRoutes } from "./routes/protected/organization";
 import { servicesRoutes } from "./routes/protected/services";
+import { specsRoutes } from "./routes/protected/specs";
+import { referenceRoutes } from "./routes/public/reference";
 import { testRoutes } from "./routes/protected/test";
 import { usageRoutes } from "./routes/protected/usage";
 import type { AppRouteEnv } from "./types";
@@ -44,7 +46,9 @@ export const apiRoutes = app
   .route("/keys", keysRoutes)
   .route("/usage", usageRoutes)
   .route("/logs", logsRoutes)
-  .route("/test", testRoutes);
+  .route("/test", testRoutes)
+  .route("/specs", specsRoutes)
+  .route("/reference", referenceRoutes);
 
 export type AppType = typeof apiRoutes;
 

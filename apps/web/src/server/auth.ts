@@ -60,7 +60,22 @@ export function createAuth(db: Database) {
     },
   },
   plugins: [
-    organization(),
+    organization({
+      sendInvitationEmail: async (data) => {
+        const baseUrl = process.env.BETTER_AUTH_URL ?? "http://localhost:5173";
+        const url = `${baseUrl}/accept-invitation?id=${data.id}`;
+        if (process.env.NODE_ENV !== "production") {
+          console.log(`[org-invite] ${data.email}: ${url}`);
+          return;
+        }
+        await sendEmail({
+          to: data.email,
+          subject: `Join ${data.organization.name} on Keyfront`,
+          text: `${data.inviter.user.name || data.inviter.user.email} invited you to join ${data.organization.name}.\n\nAccept: ${url}`,
+          html: `<p>${data.inviter.user.name || data.inviter.user.email} invited you to join <strong>${data.organization.name}</strong>.</p><p><a href="${url}">Accept invitation</a></p>`,
+        });
+      },
+    }),
     magicLink({
       sendMagicLink: async ({ email, url }) => {
         const clientUrl = url.replace(

@@ -1,26 +1,11 @@
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { useForm } from "@tanstack/react-form";
 import { useMutation, useQueryClient, useSuspenseQuery } from "@tanstack/react-query";
 import { getRouteApi } from "@tanstack/react-router";
-import {
-  createColumnHelper,
-  getCoreRowModel,
-  useReactTable,
-} from "@tanstack/react-table";
-import type { InferResponseType } from "hono/client";
+import { getCoreRowModel, useReactTable } from "@tanstack/react-table";
 import type { z } from "zod";
 import { toast } from "sonner";
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-  AlertDialogTrigger,
-} from "@/components/ui/alert-dialog";
+import { SectionHeading } from "@/components/section-heading";
 import { Button } from "@/components/ui/button";
 import { DataTable } from "@/components/ui/data-table";
 import {
@@ -45,17 +30,17 @@ import {
   FormFieldGroup,
   FormFieldLabel,
 } from "@/components/form-layout";
+import {
+  createPlansColumns,
+  PLANS_COL_WIDTHS,
+} from "@/features/services/plans/columns";
 import { plansQuery, readApiError } from "@/lib/gateway-queries";
 import { client } from "@/lib/rpc";
 import { createPlanSchema } from "../../../server/routes/protected/plans/schemas";
 
 const route = getRouteApi("/$orgId/services/$serviceId/plans");
 
-type Plan = InferResponseType<typeof client.api.plans.$get, 200>[number];
-
 const planFormSchema = createPlanSchema.omit({ serviceId: true });
-
-const columnHelper = createColumnHelper<Plan>();
 
 export function ServicePlansPage() {
   const { serviceId } = route.useParams();
@@ -77,65 +62,14 @@ export function ServicePlansPage() {
     onError: (error) => toast.error(error.message),
   });
 
-  const columns = [
-    columnHelper.accessor("name", {
-      header: () => <span className="px-2">Name</span>,
-      cell: (info) => <span className="px-2 font-medium">{info.getValue()}</span>,
-    }),
-    columnHelper.accessor("rps", {
-      header: () => <span className="px-2">RPS</span>,
-      cell: (info) => <span className="px-2">{info.getValue()}</span>,
-    }),
-    columnHelper.accessor("burst", {
-      header: () => <span className="px-2">Burst</span>,
-      cell: (info) => <span className="px-2">{info.getValue()}</span>,
-    }),
-    columnHelper.accessor("monthlyQuota", {
-      header: () => <span className="px-2">Monthly quota</span>,
-      cell: (info) => (
-        <span className="px-2">
-          {info.getValue()?.toLocaleString() ?? "Unlimited"}
-        </span>
-      ),
-    }),
-    columnHelper.accessor("priceCents", {
-      header: () => <span className="px-2">Price</span>,
-      cell: (info) => (
-        <span className="px-2">{`$${(info.getValue() / 100).toFixed(2)}/mo`}</span>
-      ),
-    }),
-    columnHelper.display({
-      id: "actions",
-      cell: (info) => (
-        <AlertDialog>
-          <AlertDialogTrigger asChild>
-            <Button variant="ghost" size="sm" disabled={deletePlan.isPending}>
-              Delete
-            </Button>
-          </AlertDialogTrigger>
-          <AlertDialogContent>
-            <AlertDialogHeader>
-              <AlertDialogTitle>
-                Delete plan "{info.row.original.name}"?
-              </AlertDialogTitle>
-              <AlertDialogDescription>
-                Plans with live API keys can't be deleted. Revoke their keys
-                first.
-              </AlertDialogDescription>
-            </AlertDialogHeader>
-            <AlertDialogFooter>
-              <AlertDialogCancel>Cancel</AlertDialogCancel>
-              <AlertDialogAction
-                onClick={() => deletePlan.mutate(info.row.original.id)}
-              >
-                Delete plan
-              </AlertDialogAction>
-            </AlertDialogFooter>
-          </AlertDialogContent>
-        </AlertDialog>
-      ),
-    }),
-  ];
+  const columns = useMemo(
+    () =>
+      createPlansColumns({
+        onDelete: (id) => deletePlan.mutate(id),
+        deletePending: deletePlan.isPending,
+      }),
+    [deletePlan.isPending, deletePlan.mutate],
+  );
 
   const table = useReactTable({
     data: plans,
@@ -143,28 +77,48 @@ export function ServicePlansPage() {
     getCoreRowModel: getCoreRowModel(),
   });
 
+  if (plans.length === 0) {
+    return (
+      <div className="mx-auto w-full max-w-4xl text-xs">
+        <section className="grid gap-5">
+          <SectionHeading
+            title="Plans"
+            description="Rate limits and quotas applied to API keys."
+          />
+          <Empty className="p-4 md:p-4">
+            <EmptyHeader>
+              <EmptyTitle className="text-sm">No plans yet</EmptyTitle>
+              <EmptyDescription className="text-xs">
+                A plan sets the rate limit and quota an API key gets.
+              </EmptyDescription>
+            </EmptyHeader>
+            <EmptyContent>
+              <NewPlanDialog serviceId={serviceId} />
+            </EmptyContent>
+          </Empty>
+        </section>
+      </div>
+    );
+  }
+
   return (
-    <div className="space-y-6">
-      {plans.length === 0 ? (
-        <Empty>
-          <EmptyHeader>
-            <EmptyTitle>No plans yet</EmptyTitle>
-            <EmptyDescription>
-              A plan sets the rate limit and quota an API key gets.
-            </EmptyDescription>
-          </EmptyHeader>
-          <EmptyContent>
-            <NewPlanDialog serviceId={serviceId} />
-          </EmptyContent>
-        </Empty>
-      ) : (
-        <>
-          <div className="flex items-center justify-end">
-            <NewPlanDialog serviceId={serviceId} />
-          </div>
-          <DataTable table={table} />
-        </>
-      )}
+    <div className="mx-auto w-full max-w-4xl text-xs">
+      <section className="grid gap-3">
+        <div className="flex flex-wrap items-center justify-between gap-4">
+          <SectionHeading
+            title="Plans"
+            description="Rate limits and quotas applied to API keys."
+          />
+          <NewPlanDialog serviceId={serviceId} />
+        </div>
+        <DataTable
+          variant="plain"
+          size="sm"
+          table={table}
+          colWidths={PLANS_COL_WIDTHS}
+          maxHeight="none"
+        />
+      </section>
     </div>
   );
 }
@@ -214,7 +168,7 @@ function NewPlanDialog({ serviceId }: { serviceId: string }) {
       onOpenChange={(next) => (next ? setOpen(true) : close())}
     >
       <DialogTrigger asChild>
-        <Button className="h-8 shrink-0">New plan</Button>
+        <Button className="h-7 shrink-0 text-xs">New plan</Button>
       </DialogTrigger>
       <DialogContent>
         <DialogHeader>

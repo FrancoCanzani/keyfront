@@ -3,6 +3,7 @@ import {
   dashboardChromeClass,
   dashboardSectionGapClass,
 } from "@/components/dashboard-chrome";
+import { OrgNav } from "@/features/organization/org-nav";
 import { ServiceNav } from "@/features/services/service-nav";
 import { authClient } from "@/lib/auth-client";
 import { parseDashboardRoute } from "@/lib/dashboard-route";
@@ -20,7 +21,8 @@ export function DashboardShell() {
   const pathname = useRouterState({
     select: (state) => state.location.pathname,
   });
-  const { serviceId, isServiceDetail } = parseDashboardRoute(pathname);
+  const { serviceId, isServiceDetail, isOrgAdmin } =
+    parseDashboardRoute(pathname);
 
   const { data: service } = useQuery({
     ...serviceQuery(serviceId ?? ""),
@@ -61,6 +63,11 @@ export function DashboardShell() {
               serviceId={serviceId}
               className="px-6"
             />
+          </div>
+        ) : null}
+        {isOrgAdmin ? (
+          <div className="-mx-6 border-b border-border">
+            <OrgNav orgId={orgId} className="px-6" />
           </div>
         ) : null}
       </div>
