@@ -22,6 +22,9 @@ export const getKeys = new Hono<AppRouteEnv>().get(
       .select({
         id: apiKeys.id,
         prefix: apiKeys.prefix,
+        name: apiKeys.name,
+        enabled: apiKeys.enabled,
+        environment: apiKeys.environment,
         status: apiKeys.status,
         createdAt: apiKeys.createdAt,
         lastUsedAt: apiKeys.lastUsedAt,

@@ -4,6 +4,7 @@ import { HTTPException } from "hono/http-exception";
 import { createAuth } from "./auth";
 import { checkDb, createDatabase } from "./db";
 import { authMiddleware } from "./middleware/auth";
+import { drainRequestLogs } from "./lib/log-drain";
 import { drainUsage } from "./lib/usage-drain";
 import { consumersRoutes } from "./routes/protected/consumers";
 import { keysRoutes } from "./routes/protected/keys";
@@ -51,6 +52,7 @@ export default {
     const { db, close } = createDatabase();
     try {
       await drainUsage(db);
+      await drainRequestLogs(db);
     } finally {
       await close();
     }

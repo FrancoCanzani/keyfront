@@ -45,7 +45,7 @@ const columnHelper = createColumnHelper<KeyRow>();
 const columns = [
   columnHelper.accessor("prefix", {
     header: () => <span className="px-2">Key</span>,
-    cell: (info) => <code className="px-2 text-xs">{info.getValue()}…</code>,
+    cell: (info) => <code className="px-2 text-xs">{info.getValue()}</code>,
   }),
   columnHelper.accessor("consumerExternalRef", {
     header: () => <span className="px-2">Consumer</span>,

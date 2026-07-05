@@ -1,10 +1,10 @@
-import { createHash, randomBytes } from "node:crypto";
 import { zValidator } from "@hono/zod-validator";
 import { and, eq } from "drizzle-orm";
 import { Hono } from "hono";
 import { HTTPException } from "hono/http-exception";
 import { apiKeys, consumers, plans, services } from "../../../db/schema/gateway";
 import { getOrganizationId } from "../../../middleware/auth";
+import { generateKey } from "../../../lib/keys";
 import { syncKey } from "../../../lib/sync";
 import type { AppRouteEnv } from "../../../types";
 import { createKeySchema } from "./schemas";
@@ -41,9 +41,9 @@ export const createKey = new Hono<AppRouteEnv>().post(
       throw new HTTPException(404, { message: "Plan not found on this service" });
     }
 
-    const rawKey = `gw_live_${randomBytes(24).toString("base64url")}`;
-    const keyHash = createHash("sha256").update(rawKey).digest("hex");
-    const prefix = rawKey.slice(0, 12);
+    const { rawKey, shortToken, prefix, keyHash } = generateKey(
+      input.environment,
+    );
     const expiresAt = input.expiresAt ? new Date(input.expiresAt) : null;
 
     const [row] = await db
@@ -53,11 +53,16 @@ export const createKey = new Hono<AppRouteEnv>().post(
         planId: input.planId,
         keyHash,
         prefix,
+        shortToken,
+        name: input.name,
+        environment: input.environment,
         expiresAt,
       })
       .returning({
         id: apiKeys.id,
         prefix: apiKeys.prefix,
+        name: apiKeys.name,
+        environment: apiKeys.environment,
         status: apiKeys.status,
         createdAt: apiKeys.createdAt,
         expiresAt: apiKeys.expiresAt,
@@ -70,6 +75,10 @@ export const createKey = new Hono<AppRouteEnv>().post(
       planId: input.planId,
       prefix,
       expiresAt,
+      environment: input.environment,
+      rps: null,
+      burst: null,
+      ipAllowlist: null,
     });
 
     // the raw key is returned exactly once and never stored

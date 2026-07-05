@@ -1,7 +1,10 @@
 import {
   bigint,
+  bigserial,
+  boolean,
   index,
   integer,
+  jsonb,
   pgTable,
   primaryKey,
   text,
@@ -84,14 +87,44 @@ export const apiKeys = pgTable(
       .references(() => plans.id, { onDelete: "restrict" }),
     // sha256 of the raw key; the raw key is shown once at creation
     keyHash: text("key_hash").notNull().unique(),
-    // display fragment, e.g. "gw_live_a1b2"
+    // public identifier embedded in the key: "gw_live_8Fk2mPqX"
     prefix: text("prefix").notNull(),
+    // the unique 8-char segment of the prefix, plaintext, for exact lookup
+    shortToken: text("short_token").unique(),
+    name: text("name"),
     status: text("status").notNull().default("active"),
+    enabled: boolean("enabled").notNull().default(true),
+    environment: text("environment").notNull().default("live"),
+    meta: jsonb("meta"),
+    // per-key overrides; null falls back to the plan
+    rps: integer("rps"),
+    burst: integer("burst"),
+    ipAllowlist: jsonb("ip_allowlist").$type<string[] | null>(),
     createdAt: timestamp("created_at").notNull().defaultNow(),
     lastUsedAt: timestamp("last_used_at"),
     expiresAt: timestamp("expires_at"),
   },
   (t) => [index("api_keys_consumer_id_idx").on(t.consumerId)],
+);
+
+export const requestLogs = pgTable(
+  "request_logs",
+  {
+    id: bigserial("id", { mode: "number" }).primaryKey(),
+    serviceId: text("service_id")
+      .notNull()
+      .references(() => services.id, { onDelete: "cascade" }),
+    keyId: text("key_id").references(() => apiKeys.id, {
+      onDelete: "set null",
+    }),
+    ts: timestamp("ts").notNull(),
+    method: text("method").notNull(),
+    path: text("path").notNull(),
+    status: integer("status").notNull(),
+    outcome: text("outcome"),
+    ms: integer("ms").notNull(),
+  },
+  (t) => [index("request_logs_service_ts_idx").on(t.serviceId, t.ts)],
 );
 
 export const usageRollup = pgTable(

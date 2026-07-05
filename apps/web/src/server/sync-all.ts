@@ -1,4 +1,4 @@
-import { eq } from "drizzle-orm";
+import { and, eq } from "drizzle-orm";
 import { createDatabase } from "./db";
 import { apiKeys, consumers, plans, services } from "./db/schema/gateway";
 import { createRedis } from "./lib/redis";
@@ -26,11 +26,15 @@ const keyRows = await db
     planId: apiKeys.planId,
     prefix: apiKeys.prefix,
     expiresAt: apiKeys.expiresAt,
+    environment: apiKeys.environment,
+    rps: apiKeys.rps,
+    burst: apiKeys.burst,
+    ipAllowlist: apiKeys.ipAllowlist,
     serviceId: consumers.serviceId,
   })
   .from(apiKeys)
   .innerJoin(consumers, eq(apiKeys.consumerId, consumers.id))
-  .where(eq(apiKeys.status, "active"));
+  .where(and(eq(apiKeys.status, "active"), eq(apiKeys.enabled, true)));
 
 await clearPrefix("route:");
 await clearPrefix("plan:");
@@ -62,6 +66,10 @@ for (const k of keyRows) {
       planId: k.planId,
       prefix: k.prefix,
       expiresAt: k.expiresAt ? k.expiresAt.getTime() : null,
+      environment: k.environment,
+      rps: k.rps,
+      burst: k.burst,
+      ipAllowlist: k.ipAllowlist,
     }),
   );
 }

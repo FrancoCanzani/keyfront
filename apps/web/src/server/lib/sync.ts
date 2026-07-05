@@ -24,6 +24,10 @@ type KeyInput = {
   planId: string;
   prefix: string;
   expiresAt: Date | null;
+  environment: string;
+  rps: number | null;
+  burst: number | null;
+  ipAllowlist: string[] | null;
 };
 
 function safe(op: string, promise: Promise<unknown>) {
@@ -77,6 +81,10 @@ export function syncKey(key: KeyInput) {
           planId: key.planId,
           prefix: key.prefix,
           expiresAt: key.expiresAt ? key.expiresAt.getTime() : null,
+          environment: key.environment,
+          rps: key.rps,
+          burst: key.burst,
+          ipAllowlist: key.ipAllowlist,
         }),
       ),
     ),

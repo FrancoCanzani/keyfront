@@ -90,6 +90,24 @@ export function ServiceKeysPage() {
     onError: (error) => toast.error(error.message),
   });
 
+  const toggleKey = useMutation({
+    mutationFn: async (input: { id: string; enabled: boolean }) => {
+      const res = await client.api.keys[":id"].$patch({
+        param: { id: input.id },
+        json: { enabled: input.enabled },
+      });
+      if (!res.ok) {
+        throw new Error(await readApiError(res, "Failed to update key"));
+      }
+      return res.json();
+    },
+    onSuccess: (key) => {
+      toast.success(key.enabled ? `Key ${key.prefix} resumed` : `Key ${key.prefix} paused`);
+      queryClient.invalidateQueries({ queryKey: ["keys", serviceId] });
+    },
+    onError: (error) => toast.error(error.message),
+  });
+
   const revokeKey = useMutation({
     mutationFn: async (id: string) => {
       const res = await client.api.keys[":id"].revoke.$patch({
@@ -101,7 +119,7 @@ export function ServiceKeysPage() {
       return res.json();
     },
     onSuccess: (key) => {
-      toast.success(`Key ${key.prefix}… revoked`);
+      toast.success(`Key ${key.prefix} revoked`);
       queryClient.invalidateQueries({ queryKey: ["keys", serviceId] });
     },
     onError: (error) => toast.error(error.message),
@@ -111,9 +129,24 @@ export function ServiceKeysPage() {
     columnHelper.accessor("prefix", {
       header: () => <span className="px-2">Key</span>,
       cell: (info) => (
-        <code className="px-2 font-mono text-xs tabular-nums">
-          {info.getValue()}…
-        </code>
+        <span className="flex items-center gap-1.5 px-2">
+          <code className="font-mono text-xs tabular-nums">
+            {info.getValue()}
+          </code>
+          {info.row.original.environment === "test" ? (
+            <span className="rounded border px-1 py-px text-[10px] text-muted-foreground">
+              test
+            </span>
+          ) : null}
+        </span>
+      ),
+    }),
+    columnHelper.accessor("name", {
+      header: () => <span className="px-2">Name</span>,
+      cell: (info) => (
+        <span className="px-2">
+          {info.getValue() ?? <span className="text-muted-foreground">—</span>}
+        </span>
       ),
     }),
     columnHelper.accessor("consumerExternalRef", {
@@ -130,17 +163,21 @@ export function ServiceKeysPage() {
     }),
     columnHelper.accessor("status", {
       header: () => <span className="px-2">Status</span>,
-      cell: (info) => (
-        <span
-          className={
-            info.getValue() === "active"
-              ? "px-2 text-xs font-medium text-green-700"
-              : "px-2 text-xs font-medium text-muted-foreground line-through"
-          }
-        >
-          {info.getValue()}
-        </span>
-      ),
+      cell: (info) => {
+        const { enabled } = info.row.original;
+        if (info.getValue() !== "active") {
+          return (
+            <span className="px-2 text-xs font-medium text-muted-foreground line-through">
+              {info.getValue()}
+            </span>
+          );
+        }
+        return enabled ? (
+          <span className="px-2 text-xs font-medium text-green-700">active</span>
+        ) : (
+          <span className="px-2 text-xs font-medium text-[#ec835a]">paused</span>
+        );
+      },
     }),
     columnHelper.accessor("lastUsedAt", {
       header: () => <span className="px-2">Last used</span>,
@@ -179,6 +216,19 @@ export function ServiceKeysPage() {
       cell: (info) =>
         info.row.original.status === "active" ? (
           <div className="flex justify-end gap-1">
+            <Button
+              variant="ghost"
+              size="sm"
+              disabled={toggleKey.isPending}
+              onClick={() =>
+                toggleKey.mutate({
+                  id: info.row.original.id,
+                  enabled: !info.row.original.enabled,
+                })
+              }
+            >
+              {info.row.original.enabled ? "Pause" : "Resume"}
+            </Button>
             <AlertDialog>
               <AlertDialogTrigger asChild>
                 <Button variant="ghost" size="sm" disabled={rotateKey.isPending}>
@@ -188,7 +238,7 @@ export function ServiceKeysPage() {
               <AlertDialogContent>
                 <AlertDialogHeader>
                   <AlertDialogTitle>
-                    Rotate {info.row.original.prefix}…?
+                    Rotate {info.row.original.prefix}?
                   </AlertDialogTitle>
                   <AlertDialogDescription>
                     A new key is issued with the same consumer, plan and
@@ -215,7 +265,7 @@ export function ServiceKeysPage() {
               <AlertDialogContent>
                 <AlertDialogHeader>
                   <AlertDialogTitle>
-                    Revoke {info.row.original.prefix}…?
+                    Revoke {info.row.original.prefix}?
                   </AlertDialogTitle>
                   <AlertDialogDescription>
                     Requests with this key start failing within the gateway's
@@ -463,9 +513,15 @@ function IssueKeyDialog({
       consumerId: string;
       planId: string;
       expiresAt: string;
+      name: string;
+      environment: "live" | "test";
     }) => {
       const res = await client.api.keys.$post({
-        json: { ...value, expiresAt: value.expiresAt || null },
+        json: {
+          ...value,
+          expiresAt: value.expiresAt || null,
+          name: value.name.trim() || null,
+        },
       });
       if (!res.ok) {
         throw new Error(await readApiError(res, "Failed to issue key"));
@@ -481,7 +537,13 @@ function IssueKeyDialog({
   });
 
   const form = useForm({
-    defaultValues: { consumerId: "", planId: "", expiresAt: "" },
+    defaultValues: {
+      consumerId: "",
+      planId: "",
+      expiresAt: "",
+      name: "",
+      environment: "live" as "live" | "test",
+    },
     onSubmit: async ({ value }) => {
       await issueKey.mutateAsync(value);
     },
@@ -577,23 +639,64 @@ function IssueKeyDialog({
                 </FormFieldGroup>
               )}
             </form.Field>
-            <form.Field name="expiresAt">
+            <form.Field name="name">
               {(field) => (
                 <FormFieldGroup>
                   <FormFieldLabel htmlFor={field.name}>
-                    Expires (optional)
+                    Name (optional)
                   </FormFieldLabel>
                   <Input
                     id={field.name}
-                    type="date"
                     className={controlClassName}
                     value={field.state.value}
-                    min={new Date().toISOString().slice(0, 10)}
                     onChange={(e) => field.handleChange(e.target.value)}
+                    placeholder="Production"
                   />
                 </FormFieldGroup>
               )}
             </form.Field>
+            <div className="grid grid-cols-2 gap-4">
+              <form.Field name="expiresAt">
+                {(field) => (
+                  <FormFieldGroup>
+                    <FormFieldLabel htmlFor={field.name}>
+                      Expires (optional)
+                    </FormFieldLabel>
+                    <Input
+                      id={field.name}
+                      type="date"
+                      className={controlClassName}
+                      value={field.state.value}
+                      min={new Date().toISOString().slice(0, 10)}
+                      onChange={(e) => field.handleChange(e.target.value)}
+                    />
+                  </FormFieldGroup>
+                )}
+              </form.Field>
+              <form.Field name="environment">
+                {(field) => (
+                  <FormFieldGroup>
+                    <FormFieldLabel htmlFor={field.name}>
+                      Environment
+                    </FormFieldLabel>
+                    <Select
+                      value={field.state.value}
+                      onValueChange={(value) =>
+                        field.handleChange(value as "live" | "test")
+                      }
+                    >
+                      <SelectTrigger id={field.name} className={controlClassName}>
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="live">Live</SelectItem>
+                        <SelectItem value="test">Test</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </FormFieldGroup>
+                )}
+              </form.Field>
+            </div>
             <DialogFooter>
               <Button
                 type="button"

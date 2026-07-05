@@ -1,10 +1,10 @@
-import { createHash, randomBytes } from "node:crypto";
 import { zValidator } from "@hono/zod-validator";
 import { and, eq } from "drizzle-orm";
 import { Hono } from "hono";
 import { HTTPException } from "hono/http-exception";
 import { apiKeys, consumers, services } from "../../../db/schema/gateway";
 import { getOrganizationId } from "../../../middleware/auth";
+import { generateKey, type KeyEnvironment } from "../../../lib/keys";
 import { removeKey, syncKey } from "../../../lib/sync";
 import type { AppRouteEnv } from "../../../types";
 import { keyIdParamSchema } from "./schemas";
@@ -25,6 +25,12 @@ export const rotateKey = new Hono<AppRouteEnv>().post(
         consumerId: apiKeys.consumerId,
         planId: apiKeys.planId,
         expiresAt: apiKeys.expiresAt,
+        name: apiKeys.name,
+        environment: apiKeys.environment,
+        meta: apiKeys.meta,
+        rps: apiKeys.rps,
+        burst: apiKeys.burst,
+        ipAllowlist: apiKeys.ipAllowlist,
         serviceId: consumers.serviceId,
       })
       .from(apiKeys)
@@ -40,9 +46,9 @@ export const rotateKey = new Hono<AppRouteEnv>().post(
       throw new HTTPException(409, { message: "Only active keys can be rotated" });
     }
 
-    const rawKey = `gw_live_${randomBytes(24).toString("base64url")}`;
-    const keyHash = createHash("sha256").update(rawKey).digest("hex");
-    const prefix = rawKey.slice(0, 12);
+    const { rawKey, shortToken, prefix, keyHash } = generateKey(
+      owned.environment as KeyEnvironment,
+    );
 
     const row = await db.transaction(async (tx) => {
       await tx
@@ -56,6 +62,13 @@ export const rotateKey = new Hono<AppRouteEnv>().post(
           planId: owned.planId,
           keyHash,
           prefix,
+          shortToken,
+          name: owned.name,
+          environment: owned.environment,
+          meta: owned.meta,
+          rps: owned.rps,
+          burst: owned.burst,
+          ipAllowlist: owned.ipAllowlist,
           expiresAt: owned.expiresAt,
         })
         .returning({
@@ -75,6 +88,10 @@ export const rotateKey = new Hono<AppRouteEnv>().post(
       planId: owned.planId,
       prefix,
       expiresAt: owned.expiresAt,
+      environment: owned.environment,
+      rps: owned.rps,
+      burst: owned.burst,
+      ipAllowlist: owned.ipAllowlist,
     });
 
     // same one-time shape as issuance
