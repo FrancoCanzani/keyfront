@@ -1,31 +1,30 @@
 package resolver
 
 import (
+	"context"
 	"errors"
 	"net"
 	"net/url"
 
+	"github.com/redis/go-redis/v9"
+
 	"github.com/francocanzani/keyfront/internal/store"
 )
 
-func Resolve(host string) (*url.URL, error) {
+var ErrNoRoute = errors.New("no route for host")
+
+func Resolve(ctx context.Context, rdb *redis.Client, host string) (*url.URL, error) {
 	if h, _, err := net.SplitHostPort(host); err == nil {
 		host = h
 	}
 
-	hosts := store.Map()
-
-	val, exists := hosts[host]
-
-	if !exists {
-		return nil, errors.New("host not found")
+	route, err := store.Get(ctx, rdb, host)
+	if errors.Is(err, redis.Nil) {
+		return nil, ErrNoRoute
 	}
-
-	parsed, err := url.Parse(val)
-
 	if err != nil {
 		return nil, err
 	}
 
-	return parsed, nil
+	return url.Parse(route.Upstream)
 }
