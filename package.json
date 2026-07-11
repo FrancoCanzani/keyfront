@@ -10,6 +10,7 @@
     "lint": "turbo lint",
     "db:generate": "bun run --cwd apps/web db:generate",
     "db:migrate:dev": "bun run --cwd apps/web db:migrate",
+    "db:reset": "dropdb --if-exists api_gateway && createdb api_gateway && bun run db:migrate:dev",
     "redis:sync": "bun run --cwd apps/web sync",
     "db:migrate:prod": "[ -n \"$DATABASE_URL_PROD\" ] || { echo 'DATABASE_URL_PROD is not set (root .env)'; exit 1; }; DATABASE_URL=\"$DATABASE_URL_PROD\" bun run --cwd apps/web db:migrate"
   },

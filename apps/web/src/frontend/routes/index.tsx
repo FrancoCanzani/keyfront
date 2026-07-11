@@ -1,13 +1,6 @@
+import { Landing } from "@/features/landing/landing";
 import { createFileRoute } from "@tanstack/react-router";
 
 export const Route = createFileRoute("/")({
-  component: Home,
+  component: Landing,
 });
-
-function Home() {
-  return (
-    <div className="flex min-h-dvh items-center justify-center">
-      <p className="text-sm text-muted-foreground">Dashboard</p>
-    </div>
-  );
-}
