@@ -69,7 +69,7 @@ Legend: `[ ]` not started · `[~]` in progress · `[x]` done
 ### Chapter 4 — Config & the Redis sync layer
 - [x] **4.1** JSON in Go — `encoding/json`, struct tags, the sync contract with Hono
 - [x] **4.2** Redis client (`go-redis`) + `context.Context`; `store.Get`, DI via `Handler(rdb)`; sentinel `ErrNoRoute` (404 vs 500)
-- [ ] **4.3** An in-memory config cache with `sync.RWMutex` (stop hitting Redis every request)
+- [x] **4.3** In-memory cache `store.Cache` with `sync.RWMutex`, read-through; proven 3 reqs → 1 Redis GET
 - [ ] **4.4** Keeping the cache fresh — pub/sub or interval refresh
 
 ### Chapter 5 — Authentication middleware

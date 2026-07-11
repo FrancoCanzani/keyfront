@@ -7,9 +7,8 @@ import (
 	"net/http/httputil"
 	"net/url"
 
-	"github.com/redis/go-redis/v9"
-
 	"github.com/francocanzani/keyfront/internal/resolver"
+	"github.com/francocanzani/keyfront/internal/store"
 )
 
 func New(target *url.URL) *httputil.ReverseProxy {
@@ -32,9 +31,9 @@ func New(target *url.URL) *httputil.ReverseProxy {
 	}
 }
 
-func Handler(rdb *redis.Client) http.HandlerFunc {
+func Handler(cache *store.Cache) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		target, err := resolver.Resolve(r.Context(), rdb, r.Host)
+		target, err := resolver.Resolve(r.Context(), cache, r.Host)
 		if errors.Is(err, resolver.ErrNoRoute) {
 			http.Error(w, "no route for host", http.StatusNotFound)
 			return

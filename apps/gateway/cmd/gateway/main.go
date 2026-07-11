@@ -8,6 +8,7 @@ import (
 	"github.com/francocanzani/keyfront/internal/config"
 	"github.com/francocanzani/keyfront/internal/proxy"
 	"github.com/francocanzani/keyfront/internal/redis"
+	"github.com/francocanzani/keyfront/internal/store"
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/chi/v5/middleware"
 )
@@ -28,7 +29,8 @@ func main() {
 		w.Write([]byte("hi"))
 	})
 
-	router.Handle("/*", proxy.Handler(rdb))
+	cache := store.NewCache(rdb)
+	router.Handle("/*", proxy.Handler(cache))
 
 	log.Printf("gateway listening on %s", cfg.Address)
 	if err := http.ListenAndServe(cfg.Address, router); err != nil {
