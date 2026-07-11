@@ -4,38 +4,45 @@ import (
 	"context"
 	"encoding/json"
 	"sync"
+	"time"
 
 	"github.com/redis/go-redis/v9"
 )
+
+const routeTTL = 30 * time.Second
 
 type Route struct {
 	Host     string `json:"host"`
 	Upstream string `json:"upstream"`
 }
 
+type entry struct {
+	route     Route
+	fetchedAt time.Time
+}
+
 type Cache struct {
 	rdb    *redis.Client
 	mu     sync.RWMutex
-	routes map[string]Route
+	ttl    time.Duration
+	routes map[string]entry
 }
 
 func NewCache(rdb *redis.Client) *Cache {
 	return &Cache{
 		rdb:    rdb,
-		routes: make(map[string]Route),
+		ttl:    routeTTL,
+		routes: make(map[string]entry),
 	}
 }
 
 func (c *Cache) Get(ctx context.Context, host string) (Route, error) {
-
 	c.mu.RLock()
-
-	route, ok := c.routes[host]
-
+	e, ok := c.routes[host]
 	c.mu.RUnlock()
 
-	if ok {
-		return route, nil
+	if ok && time.Since(e.fetchedAt) < c.ttl {
+		return e.route, nil
 	}
 
 	route, err := Get(ctx, c.rdb, host)
@@ -44,9 +51,7 @@ func (c *Cache) Get(ctx context.Context, host string) (Route, error) {
 	}
 
 	c.mu.Lock()
-
-	c.routes[host] = route
-
+	c.routes[host] = entry{route: route, fetchedAt: time.Now()}
 	c.mu.Unlock()
 
 	return route, nil

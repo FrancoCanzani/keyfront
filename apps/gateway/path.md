@@ -70,7 +70,7 @@ Legend: `[ ]` not started · `[~]` in progress · `[x]` done
 - [x] **4.1** JSON in Go — `encoding/json`, struct tags, the sync contract with Hono
 - [x] **4.2** Redis client (`go-redis`) + `context.Context`; `store.Get`, DI via `Handler(rdb)`; sentinel `ErrNoRoute` (404 vs 500)
 - [x] **4.3** In-memory cache `store.Cache` with `sync.RWMutex`, read-through; proven 3 reqs → 1 Redis GET
-- [ ] **4.4** Keeping the cache fresh — pub/sub or interval refresh
+- [x] **4.4** TTL freshness — `entry{route, fetchedAt}`, `time.Since < ttl`; proven expiry (pub/sub invalidation deferred until Hono publishes)
 
 ### Chapter 5 — Authentication middleware
 - [ ] **5.1** Extracting the key — short-token format, `Authorization` header
