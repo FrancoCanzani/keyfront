@@ -22,33 +22,35 @@ import {
   SidebarTrigger,
 } from "@/components/ui/sidebar";
 import { authClient } from "@/lib/auth-client";
+import { Link, useLocation } from "@tanstack/react-router";
 import {
-  Activity,
-  Boxes,
-  ChartNoAxesCombined,
-  ChevronsUpDown,
-  Gauge,
-  KeyRound,
-  ShieldCheck,
-  UserRound,
-  Users,
-} from "lucide-react";
+  CaretUpDownIcon,
+  ChartLineUpIcon,
+  CubeIcon,
+  GaugeIcon,
+  KeyIcon,
+  PulseIcon,
+  ShieldCheckIcon,
+  UserIcon,
+  UsersIcon,
+} from "@phosphor-icons/react";
 
 const primaryItems = [
-  { label: "Overview", icon: Gauge, active: true },
-  { label: "Services", icon: Boxes },
-  { label: "Consumers", icon: Users },
-  { label: "API keys", icon: KeyRound },
-  { label: "Request logs", icon: Activity },
+  { label: "Overview", icon: GaugeIcon, to: "/dashboard" },
+  { label: "Services", icon: CubeIcon, to: "/dashboard/services" },
+  { label: "Consumers", icon: UsersIcon },
+  { label: "API keys", icon: KeyIcon },
+  { label: "Request logs", icon: PulseIcon },
 ];
 
 const manageItems = [
-  { label: "Usage", icon: ChartNoAxesCombined },
-  { label: "Plans", icon: ShieldCheck },
+  { label: "Usage", icon: ChartLineUpIcon },
+  { label: "Plans", icon: ShieldCheckIcon, to: "/dashboard/plans" },
 ];
 
 export function AppSidebar() {
   const { data: session } = authClient.useSession();
+  const { pathname } = useLocation();
   const name = session?.user.name || "Franco";
   const email = session?.user.email || "Personal workspace";
 
@@ -58,9 +60,9 @@ export function AppSidebar() {
   }
 
   return (
-    <Sidebar>
-      <SidebarHeader>
-        <div className="flex h-8 items-center group-data-[collapsible=icon]:justify-center gap-2">
+    <Sidebar className="z-20">
+      <SidebarHeader className="h-12 justify-center">
+        <div className="flex items-center gap-2 p-1 group-data-[collapsible=icon]:justify-center">
           <span className="min-w-0 flex-1 truncate font-medium group-data-[collapsible=icon]:hidden">
             Keyfront
           </span>
@@ -68,22 +70,36 @@ export function AppSidebar() {
         </div>
       </SidebarHeader>
 
-      <SidebarContent className="gap-2">
+      <SidebarContent className="gap-1">
         <SidebarGroup>
           <SidebarGroupContent>
             <SidebarMenu className="gap-1">
-              {primaryItems.map((item) => (
-                <SidebarMenuItem key={item.label}>
-                  <SidebarMenuButton
-                    tooltip={item.label}
-                    isActive={item.active}
-                    className="[&_svg]:size-3.5 group-data-[collapsible=icon]:[&_svg]:size-4"
-                  >
-                    <item.icon />
-                    <span>{item.label}</span>
-                  </SidebarMenuButton>
-                </SidebarMenuItem>
-              ))}
+              {primaryItems.map((item) => {
+                const active = item.to ? pathname === item.to : false;
+
+                return (
+                  <SidebarMenuItem key={item.label}>
+                    <SidebarMenuButton
+                      asChild={Boolean(item.to)}
+                      tooltip={item.label}
+                      isActive={active}
+                      className="[&_svg]:size-3.5 group-data-[collapsible=icon]:[&_svg]:size-4"
+                    >
+                      {item.to ? (
+                        <Link to={item.to}>
+                          <item.icon weight={active ? "fill" : "regular"} />
+                          <span>{item.label}</span>
+                        </Link>
+                      ) : (
+                        <>
+                          <item.icon weight="regular" />
+                          <span>{item.label}</span>
+                        </>
+                      )}
+                    </SidebarMenuButton>
+                  </SidebarMenuItem>
+                );
+              })}
             </SidebarMenu>
           </SidebarGroupContent>
         </SidebarGroup>
@@ -92,17 +108,32 @@ export function AppSidebar() {
           <SidebarGroupLabel>Manage</SidebarGroupLabel>
           <SidebarGroupContent>
             <SidebarMenu className="gap-1">
-              {manageItems.map((item) => (
-                <SidebarMenuItem key={item.label}>
-                  <SidebarMenuButton
-                    tooltip={item.label}
-                    className="[&_svg]:size-3.5 group-data-[collapsible=icon]:[&_svg]:size-4"
-                  >
-                    <item.icon />
-                    <span>{item.label}</span>
-                  </SidebarMenuButton>
-                </SidebarMenuItem>
-              ))}
+              {manageItems.map((item) => {
+                const active = item.to ? pathname === item.to : false;
+
+                return (
+                  <SidebarMenuItem key={item.label}>
+                    <SidebarMenuButton
+                      asChild={Boolean(item.to)}
+                      tooltip={item.label}
+                      isActive={active}
+                      className="[&_svg]:size-3.5 group-data-[collapsible=icon]:[&_svg]:size-4"
+                    >
+                      {item.to ? (
+                        <Link to={item.to}>
+                          <item.icon weight={active ? "fill" : "regular"} />
+                          <span>{item.label}</span>
+                        </Link>
+                      ) : (
+                        <>
+                          <item.icon weight="regular" />
+                          <span>{item.label}</span>
+                        </>
+                      )}
+                    </SidebarMenuButton>
+                  </SidebarMenuItem>
+                );
+              })}
             </SidebarMenu>
           </SidebarGroupContent>
         </SidebarGroup>
@@ -115,7 +146,7 @@ export function AppSidebar() {
               <DropdownMenuTrigger asChild>
                 <SidebarMenuButton size="lg" tooltip={name}>
                   <div className="hidden size-8 shrink-0 items-center justify-center group-data-[collapsible=icon]:flex">
-                    <UserRound className="size-4" />
+                    <UserIcon className="size-4" />
                   </div>
                   <div className="min-w-0 flex-1 text-left leading-tight group-data-[collapsible=icon]:hidden">
                     <span className="block truncate">{name}</span>
@@ -123,7 +154,7 @@ export function AppSidebar() {
                       {email}
                     </span>
                   </div>
-                  <ChevronsUpDown className="ml-auto group-data-[collapsible=icon]:hidden" />
+                  <CaretUpDownIcon className="ml-auto group-data-[collapsible=icon]:hidden" />
                 </SidebarMenuButton>
               </DropdownMenuTrigger>
               <DropdownMenuContent

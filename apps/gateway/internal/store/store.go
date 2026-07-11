@@ -14,6 +14,7 @@ const routeTTL = 30 * time.Second
 type Route struct {
 	Host     string `json:"host"`
 	Upstream string `json:"upstream"`
+	Secret   string `json:"secret"`
 }
 
 type entry struct {

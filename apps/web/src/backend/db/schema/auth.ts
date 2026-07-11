@@ -9,6 +9,7 @@ export const user = pgTable("user", {
   firstName: text("first_name"),
   lastName: text("last_name"),
   position: text("position"),
+  onboardedAt: timestamp("onboarded_at"),
   createdAt: timestamp("created_at").notNull(),
   updatedAt: timestamp("updated_at").notNull(),
 });

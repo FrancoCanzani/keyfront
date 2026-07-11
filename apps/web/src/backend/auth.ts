@@ -57,6 +57,7 @@ export function createAuth(db: Database) {
       firstName: { type: "string", required: false, input: true },
       lastName: { type: "string", required: false, input: true },
       position: { type: "string", required: false, input: true },
+      onboardedAt: { type: "date", required: false, input: true },
     },
   },
   plugins: [

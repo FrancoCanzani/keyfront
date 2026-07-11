@@ -9,6 +9,9 @@ export const Route = createFileRoute("/dashboard")({
     if (!session) {
       throw redirect({ to: "/sign-in" });
     }
+    if (!session.user.onboardedAt) {
+      throw redirect({ to: "/onboarding" });
+    }
   },
   component: Dashboard,
 });

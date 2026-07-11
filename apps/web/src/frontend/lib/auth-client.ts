@@ -1,6 +1,15 @@
 import { createAuthClient } from "better-auth/react";
-import { magicLinkClient } from "better-auth/client/plugins";
+import {
+  inferAdditionalFields,
+  magicLinkClient,
+  organizationClient,
+} from "better-auth/client/plugins";
+import type { Auth } from "../../backend/auth";
 
 export const authClient = createAuthClient({
-  plugins: [magicLinkClient()],
+  plugins: [
+    magicLinkClient(),
+    organizationClient(),
+    inferAdditionalFields<Auth>(),
+  ],
 });

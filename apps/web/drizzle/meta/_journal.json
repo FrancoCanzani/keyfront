@@ -8,6 +8,27 @@
       "when": 1783778844360,
       "tag": "0000_superb_virginia_dare",
       "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "7",
+      "when": 1783785587337,
+      "tag": "0001_moaning_jack_power",
+      "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1783787098617,
+      "tag": "0002_perpetual_sway",
+      "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "7",
+      "when": 1783790039402,
+      "tag": "0003_wise_domino",
+      "breakpoints": true
     }
   ]
 }
