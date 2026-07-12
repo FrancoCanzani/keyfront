@@ -1,4 +1,10 @@
-import { index, pgTable, text, timestamp, uniqueIndex } from "drizzle-orm/pg-core";
+import {
+  index,
+  pgTable,
+  text,
+  timestamp,
+  uniqueIndex,
+} from "drizzle-orm/pg-core";
 import { organization } from "./auth";
 
 export const service = pgTable(

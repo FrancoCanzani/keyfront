@@ -5,6 +5,7 @@ import { z } from "zod";
 export const Route = createFileRoute("/auth/verify")({
   validateSearch: z.object({
     token: z.string(),
+    callbackURL: z.string().optional(),
   }),
   beforeLoad: async ({ search }) => {
     const { data, error } = await authClient.magicLink.verify({
@@ -15,6 +16,6 @@ export const Route = createFileRoute("/auth/verify")({
       throw redirect({ to: "/sign-in", replace: true });
     }
 
-    throw redirect({ to: "/dashboard", replace: true });
+    throw redirect({ href: search.callbackURL ?? "/dashboard", replace: true });
   },
 });

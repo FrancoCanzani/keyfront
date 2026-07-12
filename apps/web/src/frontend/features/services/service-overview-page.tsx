@@ -30,7 +30,7 @@ export function ServiceOverviewPage() {
       <DashboardHeader
         breadcrumbs={[
           { label: "Services", href: "/dashboard" },
-          { label: service.name },
+          { label: service.name, serviceId },
         ]}
       />
 

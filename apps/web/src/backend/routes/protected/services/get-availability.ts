@@ -9,6 +9,10 @@ import { getUser } from "../../../middleware/auth";
 import type { AppRouteEnv } from "../../../types";
 import { labelRegex } from "./schemas";
 
+type Availability =
+  | { available: false; reason: "invalid" | "reserved" | "taken" }
+  | { available: true };
+
 export const getAvailability = new Hono<AppRouteEnv>().get(
   "/availability",
   zValidator("query", z.object({ label: z.string() })),
@@ -18,10 +22,10 @@ export const getAvailability = new Hono<AppRouteEnv>().get(
     const { label } = c.req.valid("query");
 
     if (!labelRegex.test(label)) {
-      return c.json({ available: false as const, reason: "invalid" as const });
+      return c.json<Availability>({ available: false, reason: "invalid" });
     }
     if (RESERVED_LABELS.has(label)) {
-      return c.json({ available: false as const, reason: "reserved" as const });
+      return c.json<Availability>({ available: false, reason: "reserved" });
     }
 
     const [existing] = await db
@@ -30,9 +34,9 @@ export const getAvailability = new Hono<AppRouteEnv>().get(
       .where(eq(service.host, serviceHost(label)));
 
     if (existing) {
-      return c.json({ available: false as const, reason: "taken" as const });
+      return c.json<Availability>({ available: false, reason: "taken" });
     }
 
-    return c.json({ available: true as const });
+    return c.json<Availability>({ available: true });
   },
 );

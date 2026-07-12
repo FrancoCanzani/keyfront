@@ -1,4 +1,11 @@
-import { index, pgTable, text, timestamp, uniqueIndex } from "drizzle-orm/pg-core";
+import {
+  foreignKey,
+  index,
+  pgTable,
+  text,
+  timestamp,
+  uniqueIndex,
+} from "drizzle-orm/pg-core";
 import { organization } from "./auth";
 import { identity } from "./identity";
 import { plan } from "./plan";
@@ -19,9 +26,7 @@ export const key = pgTable(
     serviceId: text("service_id")
       .notNull()
       .references(() => service.id, { onDelete: "cascade" }),
-    planId: text("plan_id")
-      .notNull()
-      .references(() => plan.id, { onDelete: "restrict" }),
+    planId: text("plan_id").notNull(),
     name: text("name").notNull(),
     keyHash: text("key_hash").notNull(),
     keyPrefix: text("key_prefix").notNull(),
@@ -34,5 +39,10 @@ export const key = pgTable(
     index("key_organization_idx").on(t.organizationId),
     index("key_identity_idx").on(t.identityId),
     index("key_service_idx").on(t.serviceId),
+    foreignKey({
+      name: "key_service_plan_fk",
+      columns: [t.serviceId, t.planId],
+      foreignColumns: [plan.serviceId, plan.id],
+    }).onDelete("restrict"),
   ],
 );

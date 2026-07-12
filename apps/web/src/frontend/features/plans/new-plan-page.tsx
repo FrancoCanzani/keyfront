@@ -81,6 +81,7 @@ export function NewPlanPage() {
           {
             label: serviceQuery.data?.name ?? "Service",
             href: `/dashboard/services/${serviceId}`,
+            serviceId,
           },
           {
             label: "Plans",

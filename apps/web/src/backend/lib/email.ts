@@ -38,6 +38,8 @@ export async function sendEmail(input: SendEmailInput) {
 
   const body = (await res.json()) as { success: boolean; errors?: unknown[] };
   if (!res.ok || !body.success) {
-    throw new Error(`email send failed (${res.status}): ${JSON.stringify(body.errors)}`);
+    throw new Error(
+      `email send failed (${res.status}): ${JSON.stringify(body.errors)}`,
+    );
   }
 }

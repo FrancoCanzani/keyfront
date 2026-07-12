@@ -1,6 +1,6 @@
 import { Hono } from "hono";
 import type { AppRouteEnv } from "../../../types";
-import { getAvailability } from "./availability";
+import { getAvailability } from "./get-availability";
 import { deleteService } from "./delete";
 import { getService } from "./get";
 import { getAllServices } from "./get-all";

@@ -1,4 +1,11 @@
-import { bigint, index, pgTable, text, timestamp, uniqueIndex } from "drizzle-orm/pg-core";
+import {
+  bigint,
+  index,
+  pgTable,
+  text,
+  timestamp,
+  uniqueIndex,
+} from "drizzle-orm/pg-core";
 import { organization } from "./auth";
 import { key } from "./key";
 import { service } from "./service";

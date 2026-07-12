@@ -6,18 +6,70 @@ import {
   BreadcrumbPage,
   BreadcrumbSeparator,
 } from "@/components/ui/breadcrumb";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { SidebarTrigger } from "@/components/ui/sidebar";
+import { servicesQueryOptions } from "@/features/services/queries";
+import { CaretUpDownIcon, CheckIcon } from "@phosphor-icons/react";
+import { useQuery } from "@tanstack/react-query";
+import { useNavigate } from "@tanstack/react-router";
 import { Fragment, type ReactNode } from "react";
 
 type HeaderBreadcrumb = {
   label: string;
   href?: string;
+  serviceId?: string;
 };
 
 type DashboardHeaderProps = {
   breadcrumbs: HeaderBreadcrumb[];
   actions?: ReactNode;
 };
+
+function ServiceCrumb({
+  serviceId,
+  label,
+}: {
+  serviceId: string;
+  label: string;
+}) {
+  const navigate = useNavigate();
+  const servicesQuery = useQuery(servicesQueryOptions);
+
+  return (
+    <DropdownMenu>
+      <DropdownMenuTrigger className="flex min-w-0 items-center gap-1 rounded-md px-1 py-0.5 outline-none hover:bg-accent hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring">
+        <span className="truncate">{label}</span>
+        <CaretUpDownIcon className="size-3 shrink-0" />
+      </DropdownMenuTrigger>
+      <DropdownMenuContent align="start" className="min-w-48">
+        {(servicesQuery.data ?? []).map((service) => (
+          <DropdownMenuItem
+            key={service.id}
+            onSelect={() => {
+              if (service.id === serviceId) {
+                return;
+              }
+              void navigate({
+                to: ".",
+                params: (prev) => ({ ...prev, serviceId: service.id }),
+              });
+            }}
+          >
+            <span className="min-w-0 flex-1 truncate">{service.name}</span>
+            {service.id === serviceId ? (
+              <CheckIcon className="size-3.5 shrink-0" />
+            ) : null}
+          </DropdownMenuItem>
+        ))}
+      </DropdownMenuContent>
+    </DropdownMenu>
+  );
+}
 
 export function DashboardHeader({
   breadcrumbs,
@@ -35,7 +87,12 @@ export function DashboardHeader({
               <Fragment key={item.label}>
                 {index > 0 ? <BreadcrumbSeparator /> : null}
                 <BreadcrumbItem>
-                  {isCurrent ? (
+                  {item.serviceId ? (
+                    <ServiceCrumb
+                      serviceId={item.serviceId}
+                      label={item.label}
+                    />
+                  ) : isCurrent ? (
                     <BreadcrumbPage className="truncate">
                       {item.label}
                     </BreadcrumbPage>

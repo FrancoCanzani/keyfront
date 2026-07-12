@@ -26,7 +26,10 @@ export const identity = pgTable(
       .$onUpdate(() => new Date()),
   },
   (t) => [
-    uniqueIndex("identity_org_external_id_idx").on(t.organizationId, t.externalId),
+    uniqueIndex("identity_org_external_id_idx").on(
+      t.organizationId,
+      t.externalId,
+    ),
     index("identity_organization_idx").on(t.organizationId),
   ],
 );

@@ -2,6 +2,7 @@ package proxy
 
 import (
 	"errors"
+	"fmt"
 	"log"
 	"net/http"
 	"net/http/httputil"
@@ -20,6 +21,7 @@ func New(target *url.URL, secret string) *httputil.ReverseProxy {
 		//   X-Gateway-Secret: strip any client-supplied value, then inject ours so the origin
 		//     can verify the request actually came through the gateway.
 		Rewrite: func(pr *httputil.ProxyRequest) {
+			fmt.Println(pr)
 			pr.SetURL(target)
 			pr.SetXForwarded()
 			pr.Out.Host = target.Host

@@ -3,7 +3,7 @@ import { Hono } from "hono";
 import { service } from "../../../db/schema/service";
 import { getOrganizationId } from "../../../middleware/auth";
 import type { AppRouteEnv } from "../../../types";
-import { serviceColumns } from "../../../lib/columns";
+import { serviceColumns } from "./schemas";
 
 export const getAllServices = new Hono<AppRouteEnv>().get("/", async (c) => {
   const organizationId = getOrganizationId(c);

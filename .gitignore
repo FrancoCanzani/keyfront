@@ -25,6 +25,7 @@ apps/web/src/frontend/routeTree.gen.ts
 *.log
 .DS_Store
 .dev.vars
+.claude/settings.local.json
 
 apps/web/.wrangler/
 cookie.txt

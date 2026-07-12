@@ -36,6 +36,13 @@
       "when": 1783830155324,
       "tag": "0004_mighty_ink",
       "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "7",
+      "when": 1783863401853,
+      "tag": "0005_freezing_franklin_storm",
+      "breakpoints": true
     }
   ]
 }

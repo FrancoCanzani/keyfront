@@ -1,4 +1,12 @@
-import { bigint, index, integer, pgTable, text, timestamp } from "drizzle-orm/pg-core";
+import {
+  bigint,
+  index,
+  integer,
+  pgTable,
+  text,
+  timestamp,
+  uniqueIndex,
+} from "drizzle-orm/pg-core";
 import { organization } from "./auth";
 import { service } from "./service";
 
@@ -27,5 +35,6 @@ export const plan = pgTable(
   (t) => [
     index("plan_organization_idx").on(t.organizationId),
     index("plan_service_idx").on(t.serviceId),
+    uniqueIndex("plan_service_id_unique_idx").on(t.serviceId, t.id),
   ],
 );

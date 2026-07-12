@@ -3,8 +3,8 @@ import { type Context } from "hono";
 import { createMiddleware } from "hono/factory";
 import { HTTPException } from "hono/http-exception";
 import { createAuth } from "../auth";
-import { member } from "../db/schema/auth";
 import { createDatabase } from "../db";
+import { member } from "../db/schema/auth";
 import type { AppRouteEnv } from "../types";
 
 export const authMiddleware = createMiddleware<AppRouteEnv>(async (c, next) => {

@@ -97,6 +97,7 @@ export function ServiceSettingsPage() {
           {
             label: service?.name ?? "Service",
             href: `/dashboard/services/${serviceId}`,
+            serviceId,
           },
           { label: "Settings" },
         ]}

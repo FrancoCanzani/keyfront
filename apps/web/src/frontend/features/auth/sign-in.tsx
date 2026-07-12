@@ -2,10 +2,14 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { authClient } from "@/lib/auth-client";
+import { getRouteApi } from "@tanstack/react-router";
 import { ArrowRight, LoaderCircle } from "lucide-react";
 import { type SyntheticEvent, useState } from "react";
 
+const route = getRouteApi("/sign-in");
+
 export function SignIn() {
+  const { redirect } = route.useSearch();
   const [email, setEmail] = useState("");
   const [submittedEmail, setSubmittedEmail] = useState("");
   const [error, setError] = useState("");
@@ -18,7 +22,7 @@ export function SignIn() {
 
     const result = await authClient.signIn.magicLink({
       email,
-      callbackURL: "/dashboard",
+      callbackURL: redirect ?? "/dashboard",
     });
 
     setIsSubmitting(false);

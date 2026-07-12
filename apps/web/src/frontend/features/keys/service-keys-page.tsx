@@ -204,6 +204,7 @@ export function ServiceKeysPage() {
           {
             label: service?.name ?? "Service",
             href: `/dashboard/services/${serviceId}`,
+            serviceId,
           },
           { label: "Keys" },
         ]}

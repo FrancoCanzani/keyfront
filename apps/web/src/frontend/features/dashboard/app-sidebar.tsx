@@ -22,6 +22,7 @@ import {
   SidebarTrigger,
 } from "@/components/ui/sidebar";
 import { serviceQueryOptions } from "@/features/services/queries";
+import { WorkspaceSwitcher } from "@/features/workspace/workspace-switcher";
 import { authClient } from "@/lib/auth-client";
 import { useQuery } from "@tanstack/react-query";
 import { Link, useLocation, useParams } from "@tanstack/react-router";
@@ -49,6 +50,7 @@ type NavItem = {
 const globalItems: NavItem[] = [
   { label: "Services", icon: CubeIcon, to: "/dashboard" },
   { label: "Identities", icon: UsersIcon, to: "/dashboard/identities" },
+  { label: "Settings", icon: GearIcon, to: "/dashboard/settings" },
 ];
 
 function serviceItems(serviceId: string): NavItem[] {
@@ -119,9 +121,7 @@ export function AppSidebar() {
     <Sidebar className="z-20">
       <SidebarHeader className="h-12 justify-center">
         <div className="flex items-center gap-2 p-1 group-data-[collapsible=icon]:justify-center">
-          <span className="min-w-0 flex-1 truncate font-medium group-data-[collapsible=icon]:hidden">
-            Keyfront
-          </span>
+          <WorkspaceSwitcher />
           <SidebarTrigger className="*:size-3.5 group-data-[collapsible=icon]:*:size-4" />
         </div>
       </SidebarHeader>
@@ -196,9 +196,10 @@ export function AppSidebar() {
                 </DropdownMenuLabel>
                 <DropdownMenuSeparator />
                 <DropdownMenuGroup>
-                  <DropdownMenuItem>Settings</DropdownMenuItem>
+                  <DropdownMenuItem asChild>
+                    <Link to="/dashboard/settings">Settings</Link>
+                  </DropdownMenuItem>
                   <DropdownMenuItem>Documentation</DropdownMenuItem>
-                  <DropdownMenuItem>Switch workspace</DropdownMenuItem>
                 </DropdownMenuGroup>
                 <DropdownMenuSeparator />
                 <DropdownMenuItem
