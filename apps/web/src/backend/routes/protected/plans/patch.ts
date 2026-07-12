@@ -18,23 +18,27 @@ export const patchPlan = new Hono<AppRouteEnv>().patch(
     const id = c.req.param("id");
     const updates = c.req.valid("json");
 
-    const [updated] = await db
-      .update(plan)
-      .set(updates)
-      .where(and(eq(plan.id, id), eq(plan.organizationId, organizationId)))
-      .returning();
+    const updated = await db.transaction(async (tx) => {
+      const [row] = await tx
+        .update(plan)
+        .set(updates)
+        .where(and(eq(plan.id, id), eq(plan.organizationId, organizationId)))
+        .returning();
 
-    if (!updated) {
-      throw new HTTPException(404, { message: "Plan not found" });
-    }
+      if (!row) {
+        throw new HTTPException(404, { message: "Plan not found" });
+      }
 
-    await withRedis((redis) =>
-      syncPlan(redis, updated.id, {
-        rateLimit: updated.rateLimit,
-        burst: updated.burst,
-        monthlyQuota: updated.monthlyQuota,
-      }),
-    );
+      await withRedis((redis) =>
+        syncPlan(redis, row.id, {
+          rateLimit: row.rateLimit,
+          burst: row.burst,
+          monthlyQuota: row.monthlyQuota,
+        }),
+      );
+
+      return row;
+    });
 
     return c.json(updated);
   },

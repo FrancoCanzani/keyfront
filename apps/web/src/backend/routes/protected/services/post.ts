@@ -1,17 +1,14 @@
 import { zValidator } from "@hono/zod-validator";
-import { and, eq } from "drizzle-orm";
 import { Hono } from "hono";
 import { HTTPException } from "hono/http-exception";
-import { plan } from "../../../db/schema/plan";
 import { service } from "../../../db/schema/service";
+import { serviceHost } from "../../../lib/hosts";
 import { generateGatewaySecret } from "../../../lib/keys";
 import { withRedis } from "../../../lib/redis";
 import { syncRoute } from "../../../lib/sync";
 import { getOrganizationId } from "../../../middleware/auth";
 import type { AppRouteEnv } from "../../../types";
 import { createServiceSchema } from "./schemas";
-
-const hostSuffix = process.env.GATEWAY_HOST_SUFFIX ?? "gw.keyfront.com";
 
 function isUniqueViolation(error: unknown): boolean {
   return (
@@ -28,48 +25,41 @@ export const postService = new Hono<AppRouteEnv>().post(
   async (c) => {
     const organizationId = getOrganizationId(c);
     const db = c.get("db");
-    const { name, label, upstream, defaultPlanId } = c.req.valid("json");
+    const { name, label, upstream } = c.req.valid("json");
 
-    if (defaultPlanId) {
-      const [ownedPlan] = await db
-        .select({ id: plan.id })
-        .from(plan)
-        .where(
-          and(eq(plan.id, defaultPlanId), eq(plan.organizationId, organizationId)),
-        );
-      if (!ownedPlan) {
-        throw new HTTPException(400, { message: "Unknown plan" });
-      }
-    }
-
-    const host = `${label}.${hostSuffix}`;
+    const host = serviceHost(label);
     const secret = generateGatewaySecret();
 
     let created;
     try {
-      [created] = await db
-        .insert(service)
-        .values({
-          organizationId,
-          name,
-          host,
-          upstream,
-          gatewaySecret: secret,
-          defaultPlanId: defaultPlanId ?? null,
-        })
-        .returning();
+      created = await db.transaction(async (tx) => {
+        const [row] = await tx
+          .insert(service)
+          .values({
+            organizationId,
+            name,
+            host,
+            upstream,
+            gatewaySecret: secret,
+          })
+          .returning();
+
+        if (!row) {
+          throw new HTTPException(500, { message: "Failed to create service" });
+        }
+
+        await withRedis((redis) =>
+          syncRoute(redis, { serviceId: row.id, host, upstream, secret }),
+        );
+
+        return row;
+      });
     } catch (error) {
       if (isUniqueViolation(error)) {
         throw new HTTPException(409, { message: "That gateway host is taken" });
       }
       throw error;
     }
-
-    if (!created) {
-      throw new HTTPException(500, { message: "Failed to create service" });
-    }
-
-    await withRedis((redis) => syncRoute(redis, { host, upstream, secret }));
 
     return c.json(
       {
@@ -79,7 +69,6 @@ export const postService = new Hono<AppRouteEnv>().post(
           name: created.name,
           host: created.host,
           upstream: created.upstream,
-          defaultPlanId: created.defaultPlanId,
           createdAt: created.createdAt,
           updatedAt: created.updatedAt,
         },

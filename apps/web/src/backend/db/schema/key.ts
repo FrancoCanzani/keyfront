@@ -1,6 +1,6 @@
 import { index, pgTable, text, timestamp, uniqueIndex } from "drizzle-orm/pg-core";
 import { organization } from "./auth";
-import { consumer } from "./consumer";
+import { identity } from "./identity";
 import { plan } from "./plan";
 import { service } from "./service";
 
@@ -13,9 +13,9 @@ export const key = pgTable(
     organizationId: text("organization_id")
       .notNull()
       .references(() => organization.id, { onDelete: "cascade" }),
-    consumerId: text("consumer_id")
-      .notNull()
-      .references(() => consumer.id, { onDelete: "cascade" }),
+    identityId: text("identity_id").references(() => identity.id, {
+      onDelete: "set null",
+    }),
     serviceId: text("service_id")
       .notNull()
       .references(() => service.id, { onDelete: "cascade" }),
@@ -32,7 +32,7 @@ export const key = pgTable(
   (t) => [
     uniqueIndex("key_hash_idx").on(t.keyHash),
     index("key_organization_idx").on(t.organizationId),
-    index("key_consumer_idx").on(t.consumerId),
+    index("key_identity_idx").on(t.identityId),
     index("key_service_idx").on(t.serviceId),
   ],
 );

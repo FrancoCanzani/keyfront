@@ -1,16 +1,20 @@
 import type Redis from "ioredis";
 
 type RouteInput = {
+  serviceId: string;
   host: string;
   upstream: string;
   secret: string;
 };
 
 type KeyInput = {
-  consumerId: string;
+  id: string;
+  organizationId: string;
+  identityId: string | null;
   serviceId: string;
   planId: string;
-  organizationId: string;
+  environment: "live" | "test";
+  status: "active" | "revoked";
 };
 
 type PlanInput = {
@@ -23,6 +27,7 @@ export function syncRoute(redis: Redis, route: RouteInput) {
   return redis.set(
     `route:${route.host}`,
     JSON.stringify({
+      service_id: route.serviceId,
       host: route.host,
       upstream: route.upstream,
       secret: route.secret,
@@ -38,10 +43,13 @@ export function syncKey(redis: Redis, hash: string, key: KeyInput) {
   return redis.set(
     `key:${hash}`,
     JSON.stringify({
-      consumer_id: key.consumerId,
+      id: key.id,
+      organization_id: key.organizationId,
+      identity_id: key.identityId,
       service_id: key.serviceId,
       plan_id: key.planId,
-      organization_id: key.organizationId,
+      environment: key.environment,
+      status: key.status,
     }),
   );
 }

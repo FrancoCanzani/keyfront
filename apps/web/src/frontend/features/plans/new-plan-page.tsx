@@ -2,21 +2,27 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { DashboardHeader } from "@/features/dashboard/dashboard-header";
+import { serviceQueryOptions } from "@/features/services/queries";
 import { client } from "@/lib/api";
 import { useForm } from "@tanstack/react-form";
-import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { Link, useNavigate } from "@tanstack/react-router";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { Link, getRouteApi, useNavigate } from "@tanstack/react-router";
 import { useState } from "react";
 import { toast } from "sonner";
 import { createPlanSchema } from "../../../backend/routes/protected/plans/schemas";
 
+const route = getRouteApi("/dashboard/services/$serviceId/plans/new");
+
 export function NewPlanPage() {
+  const { serviceId } = route.useParams();
   const navigate = useNavigate();
   const queryClient = useQueryClient();
+  const serviceQuery = useQuery(serviceQueryOptions(serviceId));
   const [error, setError] = useState("");
 
   const mutation = useMutation({
     mutationFn: async (value: {
+      serviceId: string;
       name: string;
       rateLimit: number;
       burst: number;
@@ -32,13 +38,14 @@ export function NewPlanPage() {
       return res.json();
     },
     onSuccess: async () => {
-      await queryClient.invalidateQueries({ queryKey: ["plans"] });
+      await queryClient.invalidateQueries({ queryKey: ["plans", serviceId] });
       toast.success("Plan created");
     },
   });
 
   const form = useForm({
     defaultValues: {
+      serviceId,
       name: "",
       rateLimit: 10,
       burst: 20,
@@ -52,7 +59,10 @@ export function NewPlanPage() {
       setError("");
       try {
         await mutation.mutateAsync(value);
-        void navigate({ to: "/dashboard/plans" });
+        void navigate({
+          to: "/dashboard/services/$serviceId/plans",
+          params: { serviceId },
+        });
       } catch (submitError) {
         setError(
           submitError instanceof Error
@@ -67,7 +77,15 @@ export function NewPlanPage() {
     <>
       <DashboardHeader
         breadcrumbs={[
-          { label: "Plans", href: "/dashboard/plans" },
+          { label: "Services", href: "/dashboard" },
+          {
+            label: serviceQuery.data?.name ?? "Service",
+            href: `/dashboard/services/${serviceId}`,
+          },
+          {
+            label: "Plans",
+            href: `/dashboard/services/${serviceId}/plans`,
+          },
           { label: "New" },
         ]}
       />
@@ -77,8 +95,9 @@ export function NewPlanPage() {
           <div>
             <h1 className="text-lg font-medium">New plan</h1>
             <p className="mt-1 text-sm text-muted-foreground">
-              A plan is a set of limits. You attach it to a key, and the gateway
-              enforces these limits on every request that key makes.
+              A plan is a set of limits for this service. You attach it to a
+              key, and the gateway enforces these limits on every request that
+              key makes.
             </p>
           </div>
 
@@ -187,7 +206,12 @@ export function NewPlanPage() {
 
             <div className="flex items-center justify-end gap-2">
               <Button asChild type="button" variant="ghost">
-                <Link to="/dashboard/plans">Cancel</Link>
+                <Link
+                  to="/dashboard/services/$serviceId/plans"
+                  params={{ serviceId }}
+                >
+                  Cancel
+                </Link>
               </Button>
               <form.Subscribe
                 selector={(state) => [state.canSubmit, state.isSubmitting]}

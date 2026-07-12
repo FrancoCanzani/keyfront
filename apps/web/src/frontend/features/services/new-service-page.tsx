@@ -1,30 +1,28 @@
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
 import { DashboardHeader } from "@/features/dashboard/dashboard-header";
-import { plansQueryOptions } from "@/features/plans/queries";
 import { client } from "@/lib/api";
 import { useForm } from "@tanstack/react-form";
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { Link, useNavigate } from "@tanstack/react-router";
 import { useState } from "react";
-import { createServiceSchema } from "../../../backend/routes/protected/services/schemas";
+import {
+  createServiceSchema,
+  labelRegex,
+} from "../../../backend/routes/protected/services/schemas";
 import { ServiceSecretDialog } from "./service-secret-dialog";
 
-type CreatedService = { host: string; upstream: string; secret: string };
+type CreatedService = {
+  id: string;
+  host: string;
+  upstream: string;
+  secret: string;
+};
 
 export function NewServicePage() {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
-  const plansQuery = useQuery(plansQueryOptions);
-  const plans = plansQuery.data ?? [];
 
   const [error, setError] = useState("");
   const [createdService, setCreatedService] = useState<CreatedService | null>(
@@ -36,7 +34,6 @@ export function NewServicePage() {
       name: string;
       label: string;
       upstream: string;
-      defaultPlanId: string;
     }) => {
       const res = await client.api.services.$post({ json: value });
       if (!res.ok) {
@@ -50,6 +47,7 @@ export function NewServicePage() {
     onSuccess: async (data) => {
       await queryClient.invalidateQueries({ queryKey: ["services"] });
       setCreatedService({
+        id: data.service.id,
         host: data.service.host,
         upstream: data.service.upstream,
         secret: data.secret,
@@ -58,7 +56,7 @@ export function NewServicePage() {
   });
 
   const form = useForm({
-    defaultValues: { name: "", label: "", upstream: "", defaultPlanId: "" },
+    defaultValues: { name: "", label: "", upstream: "" },
     validators: {
       onMount: createServiceSchema,
       onChange: createServiceSchema,
@@ -81,7 +79,7 @@ export function NewServicePage() {
     <>
       <DashboardHeader
         breadcrumbs={[
-          { label: "Services", href: "/dashboard/services" },
+          { label: "Services", href: "/dashboard" },
           { label: "New" },
         ]}
       />
@@ -124,7 +122,33 @@ export function NewServicePage() {
               )}
             </form.Field>
 
-            <form.Field name="label">
+            <form.Field
+              name="label"
+              validators={{
+                onChangeAsyncDebounceMs: 400,
+                onChangeAsync: async ({ value }) => {
+                  if (!labelRegex.test(value)) {
+                    return undefined;
+                  }
+                  const res = await client.api.services.availability.$get({
+                    query: { label: value },
+                  });
+                  if (!res.ok) {
+                    return undefined;
+                  }
+                  const data = await res.json();
+                  if (data.available) {
+                    return undefined;
+                  }
+                  return {
+                    message:
+                      data.reason === "reserved"
+                        ? `${value} is a reserved subdomain`
+                        : `${value} is already taken`,
+                  };
+                },
+              }}
+            >
               {(field) => (
                 <Field
                   label="Gateway subdomain"
@@ -168,50 +192,13 @@ export function NewServicePage() {
               )}
             </form.Field>
 
-            <form.Field name="defaultPlanId">
-              {(field) => (
-                <div className="space-y-1.5">
-                  <Label htmlFor={field.name}>Default plan</Label>
-                  <Select
-                    value={field.state.value}
-                    onValueChange={field.handleChange}
-                    disabled={plans.length === 0}
-                  >
-                    <SelectTrigger id={field.name} className="w-full">
-                      <SelectValue placeholder="Select a plan" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {plans.map((plan) => (
-                        <SelectItem key={plan.id} value={plan.id}>
-                          {plan.name}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                  {plans.length === 0 ? (
-                    <p className="text-xs leading-5 text-muted-foreground">
-                      You need a plan before creating a service.{" "}
-                      <Link to="/dashboard/plans/new" className="underline">
-                        Create a plan first
-                      </Link>
-                    </p>
-                  ) : (
-                    <p className="text-xs leading-5 text-muted-foreground">
-                      New keys for this service start on this plan. You can
-                      change it per key later.
-                    </p>
-                  )}
-                </div>
-              )}
-            </form.Field>
-
             {error ? (
               <p className="text-xs leading-5 text-destructive">{error}</p>
             ) : null}
 
             <div className="flex items-center justify-end gap-2">
               <Button asChild type="button" variant="ghost">
-                <Link to="/dashboard/services">Cancel</Link>
+                <Link to="/dashboard">Cancel</Link>
               </Button>
               <form.Subscribe
                 selector={(state) => [state.canSubmit, state.isSubmitting]}
@@ -230,8 +217,13 @@ export function NewServicePage() {
       <ServiceSecretDialog
         service={createdService}
         onClose={() => {
+          const id = createdService?.id;
           setCreatedService(null);
-          void navigate({ to: "/dashboard/services" });
+          void navigate(
+            id
+              ? { to: "/dashboard/services/$serviceId", params: { serviceId: id } }
+              : { to: "/dashboard" },
+          );
         }}
       />
     </>

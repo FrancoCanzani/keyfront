@@ -21,13 +21,18 @@ import {
   SidebarRail,
   SidebarTrigger,
 } from "@/components/ui/sidebar";
+import { serviceQueryOptions } from "@/features/services/queries";
 import { authClient } from "@/lib/auth-client";
-import { Link, useLocation } from "@tanstack/react-router";
+import { useQuery } from "@tanstack/react-query";
+import { Link, useLocation, useParams } from "@tanstack/react-router";
+import type { Icon } from "@phosphor-icons/react";
 import {
+  ArrowLeftIcon,
   CaretUpDownIcon,
   ChartLineUpIcon,
   CubeIcon,
   GaugeIcon,
+  GearIcon,
   KeyIcon,
   PulseIcon,
   ShieldCheckIcon,
@@ -35,22 +40,73 @@ import {
   UsersIcon,
 } from "@phosphor-icons/react";
 
-const primaryItems = [
-  { label: "Overview", icon: GaugeIcon, to: "/dashboard" },
-  { label: "Services", icon: CubeIcon, to: "/dashboard/services" },
-  { label: "Consumers", icon: UsersIcon },
-  { label: "API keys", icon: KeyIcon },
-  { label: "Request logs", icon: PulseIcon },
+type NavItem = {
+  label: string;
+  icon: Icon;
+  to?: string;
+};
+
+const globalItems: NavItem[] = [
+  { label: "Services", icon: CubeIcon, to: "/dashboard" },
+  { label: "Identities", icon: UsersIcon, to: "/dashboard/identities" },
 ];
 
-const manageItems = [
-  { label: "Usage", icon: ChartLineUpIcon },
-  { label: "Plans", icon: ShieldCheckIcon, to: "/dashboard/plans" },
-];
+function serviceItems(serviceId: string): NavItem[] {
+  const base = `/dashboard/services/${serviceId}`;
+  return [
+    { label: "Overview", icon: GaugeIcon, to: base },
+    { label: "Keys", icon: KeyIcon, to: `${base}/keys` },
+    { label: "Plans", icon: ShieldCheckIcon, to: `${base}/plans` },
+    { label: "Request logs", icon: PulseIcon },
+    { label: "Usage", icon: ChartLineUpIcon },
+    { label: "Settings", icon: GearIcon, to: `${base}/settings` },
+  ];
+}
+
+function NavMenu({ items, pathname }: { items: NavItem[]; pathname: string }) {
+  return (
+    <SidebarMenu className="gap-1">
+      {items.map((item) => {
+        const active = item.to ? pathname === item.to : false;
+
+        return (
+          <SidebarMenuItem key={item.label}>
+            <SidebarMenuButton
+              asChild={Boolean(item.to)}
+              tooltip={item.label}
+              isActive={active}
+              className="[&_svg]:size-3.5 group-data-[collapsible=icon]:[&_svg]:size-4"
+            >
+              {item.to ? (
+                <Link to={item.to}>
+                  <item.icon weight={active ? "fill" : "regular"} />
+                  <span>{item.label}</span>
+                </Link>
+              ) : (
+                <>
+                  <item.icon weight="regular" />
+                  <span className="text-muted-foreground">{item.label}</span>
+                </>
+              )}
+            </SidebarMenuButton>
+          </SidebarMenuItem>
+        );
+      })}
+    </SidebarMenu>
+  );
+}
 
 export function AppSidebar() {
   const { data: session } = authClient.useSession();
   const { pathname } = useLocation();
+  const params = useParams({ strict: false });
+  const serviceId = params.serviceId;
+
+  const serviceQuery = useQuery({
+    ...serviceQueryOptions(serviceId ?? ""),
+    enabled: Boolean(serviceId),
+  });
+
   const name = session?.user.name || "Franco";
   const email = session?.user.email || "Personal workspace";
 
@@ -71,72 +127,43 @@ export function AppSidebar() {
       </SidebarHeader>
 
       <SidebarContent className="gap-1">
-        <SidebarGroup>
-          <SidebarGroupContent>
-            <SidebarMenu className="gap-1">
-              {primaryItems.map((item) => {
-                const active = item.to ? pathname === item.to : false;
-
-                return (
-                  <SidebarMenuItem key={item.label}>
+        {serviceId ? (
+          <>
+            <SidebarGroup className="pb-0">
+              <SidebarGroupContent>
+                <SidebarMenu className="gap-1">
+                  <SidebarMenuItem>
                     <SidebarMenuButton
-                      asChild={Boolean(item.to)}
-                      tooltip={item.label}
-                      isActive={active}
-                      className="[&_svg]:size-3.5 group-data-[collapsible=icon]:[&_svg]:size-4"
+                      asChild
+                      tooltip="Services"
+                      className="text-muted-foreground [&_svg]:size-3.5 group-data-[collapsible=icon]:[&_svg]:size-4"
                     >
-                      {item.to ? (
-                        <Link to={item.to}>
-                          <item.icon weight={active ? "fill" : "regular"} />
-                          <span>{item.label}</span>
-                        </Link>
-                      ) : (
-                        <>
-                          <item.icon weight="regular" />
-                          <span>{item.label}</span>
-                        </>
-                      )}
+                      <Link to="/dashboard">
+                        <ArrowLeftIcon />
+                        <span>Services</span>
+                      </Link>
                     </SidebarMenuButton>
                   </SidebarMenuItem>
-                );
-              })}
-            </SidebarMenu>
-          </SidebarGroupContent>
-        </SidebarGroup>
+                </SidebarMenu>
+              </SidebarGroupContent>
+            </SidebarGroup>
 
-        <SidebarGroup>
-          <SidebarGroupLabel>Manage</SidebarGroupLabel>
-          <SidebarGroupContent>
-            <SidebarMenu className="gap-1">
-              {manageItems.map((item) => {
-                const active = item.to ? pathname === item.to : false;
-
-                return (
-                  <SidebarMenuItem key={item.label}>
-                    <SidebarMenuButton
-                      asChild={Boolean(item.to)}
-                      tooltip={item.label}
-                      isActive={active}
-                      className="[&_svg]:size-3.5 group-data-[collapsible=icon]:[&_svg]:size-4"
-                    >
-                      {item.to ? (
-                        <Link to={item.to}>
-                          <item.icon weight={active ? "fill" : "regular"} />
-                          <span>{item.label}</span>
-                        </Link>
-                      ) : (
-                        <>
-                          <item.icon weight="regular" />
-                          <span>{item.label}</span>
-                        </>
-                      )}
-                    </SidebarMenuButton>
-                  </SidebarMenuItem>
-                );
-              })}
-            </SidebarMenu>
-          </SidebarGroupContent>
-        </SidebarGroup>
+            <SidebarGroup>
+              <SidebarGroupLabel className="truncate">
+                {serviceQuery.data?.name ?? "Service"}
+              </SidebarGroupLabel>
+              <SidebarGroupContent>
+                <NavMenu items={serviceItems(serviceId)} pathname={pathname} />
+              </SidebarGroupContent>
+            </SidebarGroup>
+          </>
+        ) : (
+          <SidebarGroup>
+            <SidebarGroupContent>
+              <NavMenu items={globalItems} pathname={pathname} />
+            </SidebarGroupContent>
+          </SidebarGroup>
+        )}
       </SidebarContent>
 
       <SidebarFooter className="p-2">

@@ -23,12 +23,19 @@ export const deletePlanRoute = new Hono<AppRouteEnv>().delete(
     const db = c.get("db");
     const id = c.req.param("id");
 
-    let deleted;
     try {
-      [deleted] = await db
-        .delete(plan)
-        .where(and(eq(plan.id, id), eq(plan.organizationId, organizationId)))
-        .returning({ id: plan.id });
+      await db.transaction(async (tx) => {
+        const [deleted] = await tx
+          .delete(plan)
+          .where(and(eq(plan.id, id), eq(plan.organizationId, organizationId)))
+          .returning({ id: plan.id });
+
+        if (!deleted) {
+          throw new HTTPException(404, { message: "Plan not found" });
+        }
+
+        await withRedis((redis) => deletePlan(redis, deleted.id));
+      });
     } catch (error) {
       if (isForeignKeyViolation(error)) {
         throw new HTTPException(409, {
@@ -37,12 +44,6 @@ export const deletePlanRoute = new Hono<AppRouteEnv>().delete(
       }
       throw error;
     }
-
-    if (!deleted) {
-      throw new HTTPException(404, { message: "Plan not found" });
-    }
-
-    await withRedis((redis) => deletePlan(redis, deleted.id));
 
     return c.json({ ok: true });
   },

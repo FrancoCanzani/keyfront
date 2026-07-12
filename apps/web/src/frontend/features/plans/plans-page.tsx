@@ -23,10 +23,11 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { DashboardHeader } from "@/features/dashboard/dashboard-header";
+import { serviceQueryOptions } from "@/features/services/queries";
 import { client } from "@/lib/api";
 import { DotsThreeIcon } from "@phosphor-icons/react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { Link } from "@tanstack/react-router";
+import { Link, getRouteApi } from "@tanstack/react-router";
 import {
   createColumnHelper,
   getCoreRowModel,
@@ -36,10 +37,14 @@ import { useMemo, useState } from "react";
 import { toast } from "sonner";
 import { type Plan, plansQueryOptions } from "./queries";
 
+const route = getRouteApi("/dashboard/services/$serviceId/plans/");
+
 const columnHelper = createColumnHelper<Plan>();
 
-export function PlansPage() {
-  const query = useQuery(plansQueryOptions);
+export function ServicePlansPage() {
+  const { serviceId } = route.useParams();
+  const serviceQuery = useQuery(serviceQueryOptions(serviceId));
+  const query = useQuery(plansQueryOptions(serviceId));
   const queryClient = useQueryClient();
 
   const [pendingDelete, setPendingDelete] = useState<Plan | null>(null);
@@ -56,7 +61,7 @@ export function PlansPage() {
       return res.json();
     },
     onSuccess: async () => {
-      await queryClient.invalidateQueries({ queryKey: ["plans"] });
+      await queryClient.invalidateQueries({ queryKey: ["plans", serviceId] });
       toast.success("Plan deleted");
     },
     onError: (mutationError) =>
@@ -76,18 +81,21 @@ export function PlansPage() {
       }),
       columnHelper.accessor("rateLimit", {
         header: "Rate limit",
+        meta: { width: "20%" },
         cell: (info) => (
           <span className="text-muted-foreground">{info.getValue()}/s</span>
         ),
       }),
       columnHelper.accessor("burst", {
         header: "Burst",
+        meta: { width: "18%" },
         cell: (info) => (
           <span className="text-muted-foreground">{info.getValue()}</span>
         ),
       }),
       columnHelper.accessor("monthlyQuota", {
         header: "Monthly quota",
+        meta: { width: "24%" },
         cell: (info) => (
           <span className="text-muted-foreground">
             {info.getValue().toLocaleString()}
@@ -127,10 +135,22 @@ export function PlansPage() {
   return (
     <>
       <DashboardHeader
-        breadcrumbs={[{ label: "Plans" }]}
+        breadcrumbs={[
+          { label: "Services", href: "/dashboard" },
+          {
+            label: serviceQuery.data?.name ?? "Service",
+            href: `/dashboard/services/${serviceId}`,
+          },
+          { label: "Plans" },
+        ]}
         actions={
           <Button asChild size="sm">
-            <Link to="/dashboard/plans/new">New plan</Link>
+            <Link
+              to="/dashboard/services/$serviceId/plans/new"
+              params={{ serviceId }}
+            >
+              New plan
+            </Link>
           </Button>
         }
       />
@@ -139,13 +159,14 @@ export function PlansPage() {
         {query.isLoading ? (
           <p className="text-sm text-muted-foreground">Loading plans...</p>
         ) : query.data && query.data.length > 0 ? (
-          <DataTable table={table} colWidths={["34%", "20%", "18%", "24%", "4%"]} />
+          <DataTable table={table} />
         ) : (
           <Empty>
             <EmptyHeader>
               <EmptyTitle>No plans yet</EmptyTitle>
               <EmptyDescription>
-                Create a plan to set the limits your keys run under.
+                Create a plan to set the limits keys for this service run
+                under.
               </EmptyDescription>
             </EmptyHeader>
           </Empty>

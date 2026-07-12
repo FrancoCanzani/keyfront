@@ -16,3 +16,15 @@ export const servicesQueryOptions = queryOptions({
     return res.json();
   },
 });
+
+export const serviceQueryOptions = (id: string) =>
+  queryOptions({
+    queryKey: ["services", id],
+    queryFn: async () => {
+      const res = await client.api.services[":id"].$get({ param: { id } });
+      if (!res.ok) {
+        throw new Error("Failed to load service");
+      }
+      return res.json();
+    },
+  });

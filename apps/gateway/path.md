@@ -93,10 +93,13 @@ identity to the request for everything downstream.
   `router.Use(...)` *before* the proxy (but after `/healthz`, which stays public).
 - Read the key from the `Authorization: Bearer <token>` header. Enforce your short-token format.
 - Hash the presented key (`sha256`) and look up `key:<hash>` in Redis (via a cache like routes).
-- Reject: missing/garbage → 401; found-but-paused or wrong-environment → 403. Clean bodies,
-  logged causes — same discipline as the proxy `ErrorHandler`.
-- On success, stash the key's identity (org id, key id, environment) on the request context and
-  call `next.ServeHTTP`.
+  The payload (sync.ts contract): `id`, `organization_id`, `identity_id` (nullable), `service_id`,
+  `plan_id`, `environment` (live|test), `status` (active|revoked).
+- Reject: missing/garbage → 401; `status: revoked` → 403; key whose `service_id` does not match
+  the resolved route's `service_id` → 403 (a key for one service must not open another). Clean
+  bodies, logged causes — same discipline as the proxy `ErrorHandler`.
+- On success, stash the key's identity (org id, key id, plan id, environment) on the request
+  context and call `next.ServeHTTP`.
 
 **Learn:** middleware as handler-wrapping (`func(next http.Handler) http.Handler`); `chi`'s
 `Use`; `crypto/sha256`; `crypto/subtle.ConstantTimeCompare` (why `==` on secrets is a timing
@@ -112,7 +115,8 @@ and a downstream log line can read the org/key id off the context.
 **Goal:** cap requests per key so one caller can't swamp an upstream; return `429` when over.
 
 **Build:**
-- Enforce per-key limits (limit + window come from the key's config in Redis).
+- Enforce per-key limits. Limits live on the key's plan: look up `plan:<plan_id>` in Redis
+  (`rate_limit` per second, `burst`, `monthly_quota`), cached like routes and keys.
 - Do the counting in **Redis** (`INCR` + `EXPIRE`, or a sorted-set sliding window) so multiple
   gateway instances share one count — an in-memory limiter would let N instances allow N× the
   limit. A Lua script (`EVAL`) makes the incr+expire atomic.
@@ -135,7 +139,9 @@ request, and get it to Postgres via the Hono drain — **the gateway never touch
 **Build:**
 - Wrap `ResponseWriter` to capture status code + bytes written (the default writer exposes
   neither after the fact).
-- Time each request; build a log record (host, path, status, latency, key id from ctx).
+- Time each request; build a log record (host, path, status, latency, key id from ctx, and
+  units: read `X-Keyfront-Units` from the origin's response, default 1 — this is the billing
+  unit, see `plan.md` phase 2).
 - Push records onto a **buffered channel**; a single background goroutine drains the channel and
   `XADD`s them to a Redis Stream in batches. The request path never blocks on I/O — it just sends
   on the channel.

@@ -4,7 +4,7 @@ import { HTTPException } from "hono/http-exception";
 import { service } from "../../../db/schema/service";
 import { getOrganizationId } from "../../../middleware/auth";
 import type { AppRouteEnv } from "../../../types";
-import { serviceColumns } from "./columns";
+import { serviceColumns } from "../../../lib/columns";
 
 export const getService = new Hono<AppRouteEnv>().get("/:id", async (c) => {
   const organizationId = getOrganizationId(c);

@@ -1,9 +1,11 @@
 import { Hono } from "hono";
-import { logger } from "hono/logger";
 import { HTTPException } from "hono/http-exception";
+import { logger } from "hono/logger";
 import { createAuth } from "./auth";
 import { checkDb } from "./db";
 import { authMiddleware } from "./middleware/auth";
+import { identities } from "./routes/protected/identities";
+import { keys } from "./routes/protected/keys";
 import { plans } from "./routes/protected/plans";
 import { services } from "./routes/protected/services";
 import type { AppRouteEnv } from "./types";
@@ -29,7 +31,9 @@ export const apiRoutes = app
   .basePath("/api")
   .get("/health", async (c) => c.json({ ok: await checkDb(c.get("db")) }))
   .route("/services", services)
-  .route("/plans", plans);
+  .route("/plans", plans)
+  .route("/identities", identities)
+  .route("/keys", keys);
 
 export type AppType = typeof apiRoutes;
 

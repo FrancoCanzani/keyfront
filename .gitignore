@@ -26,5 +26,5 @@ apps/web/src/frontend/routeTree.gen.ts
 .DS_Store
 .dev.vars
 
-apps/web/.wrangler/state/
+apps/web/.wrangler/
 cookie.txt

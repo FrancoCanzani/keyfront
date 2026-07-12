@@ -26,7 +26,7 @@ import { DashboardHeader } from "@/features/dashboard/dashboard-header";
 import { client } from "@/lib/api";
 import { DotsThreeIcon } from "@phosphor-icons/react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { Link } from "@tanstack/react-router";
+import { Link, useNavigate } from "@tanstack/react-router";
 import {
   createColumnHelper,
   getCoreRowModel,
@@ -41,6 +41,7 @@ const columnHelper = createColumnHelper<Service>();
 export function ServicesPage() {
   const query = useQuery(servicesQueryOptions);
   const queryClient = useQueryClient();
+  const navigate = useNavigate();
 
   const [pendingDelete, setPendingDelete] = useState<Service | null>(null);
 
@@ -68,6 +69,7 @@ export function ServicesPage() {
       }),
       columnHelper.accessor("host", {
         header: "Gateway host",
+        meta: { width: "28%" },
         cell: (info) => (
           <span className="truncate text-muted-foreground">
             {info.getValue()}
@@ -76,6 +78,7 @@ export function ServicesPage() {
       }),
       columnHelper.accessor("upstream", {
         header: "Origin",
+        meta: { width: "28%" },
         cell: (info) => (
           <span className="truncate text-muted-foreground">
             {info.getValue()}
@@ -84,6 +87,7 @@ export function ServicesPage() {
       }),
       columnHelper.accessor("createdAt", {
         header: "Created",
+        meta: { width: "12%" },
         cell: (info) => (
           <span className="text-muted-foreground">
             {new Date(info.getValue()).toLocaleDateString()}
@@ -137,7 +141,12 @@ export function ServicesPage() {
         ) : query.data && query.data.length > 0 ? (
           <DataTable
             table={table}
-            colWidths={["28%", "28%", "28%", "12%", "4%"]}
+            onRowClick={(row) =>
+              void navigate({
+                to: "/dashboard/services/$serviceId",
+                params: { serviceId: row.id },
+              })
+            }
           />
         ) : (
           <Empty>

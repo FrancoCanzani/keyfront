@@ -1,4 +1,4 @@
-import { service } from "../../../db/schema/service";
+import { service } from "../db/schema/service";
 
 export const serviceColumns = {
   id: service.id,
@@ -6,7 +6,6 @@ export const serviceColumns = {
   name: service.name,
   host: service.host,
   upstream: service.upstream,
-  defaultPlanId: service.defaultPlanId,
   createdAt: service.createdAt,
   updatedAt: service.updatedAt,
 };
