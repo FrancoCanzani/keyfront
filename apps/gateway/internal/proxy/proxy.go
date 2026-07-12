@@ -1,6 +1,7 @@
 package proxy
 
 import (
+	"context"
 	"errors"
 	"log"
 	"net/http"
@@ -17,6 +18,22 @@ import (
 	"github.com/francocanzani/keyfront/internal/store"
 )
 
+// Counters outlive their month so the rollup can sweep them after it closes.
+const usageTTL = 40 * 24 * time.Hour
+
+func monthlyUsage(ctx context.Context, rdb *redis.Client, keyID string) (int64, error) {
+	counter := "usage:" + keyID + ":" + time.Now().UTC().Format("2006-01")
+
+	pipe := rdb.Pipeline()
+	incr := pipe.Incr(ctx, counter)
+	pipe.ExpireNX(ctx, counter, usageTTL)
+	if _, err := pipe.Exec(ctx); err != nil {
+		return 0, err
+	}
+
+	return incr.Val(), nil
+}
+
 func New(target *url.URL, secret string) *httputil.ReverseProxy {
 	return &httputil.ReverseProxy{
 		// The origin must receive our secret but never the caller's key or a
@@ -27,6 +44,7 @@ func New(target *url.URL, secret string) *httputil.ReverseProxy {
 			pr.Out.Host = target.Host
 			pr.Out.Header.Del("Authorization")
 			pr.Out.Header.Del("X-Gateway-Secret")
+			pr.Out.Header.Del("X-Keyfront-Host")
 			if secret != "" {
 				pr.Out.Header.Set("X-Gateway-Secret", secret)
 			}
@@ -42,7 +60,14 @@ func New(target *url.URL, secret string) *httputil.ReverseProxy {
 
 func Handler(cache *store.Cache, rdb *redis.Client, limiter *redis_rate.Limiter) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		target, route, err := resolver.Resolve(r.Context(), cache, r.Host)
+		// Workerd callers (the dashboard playground) cannot set Host on
+		// outbound fetches, so they route via this header instead.
+		host := r.Host
+		if override := r.Header.Get("X-Keyfront-Host"); override != "" {
+			host = override
+		}
+
+		target, route, err := resolver.Resolve(r.Context(), cache, host)
 		if errors.Is(err, resolver.ErrNoRoute) {
 			http.Error(w, "no route for host", http.StatusNotFound)
 			return
@@ -96,6 +121,18 @@ func Handler(cache *store.Cache, rdb *redis.Client, limiter *redis_rate.Limiter)
 			w.Header().Set("Retry-After", strconv.Itoa(int(retryAfter)))
 			http.Error(w, "rate limit exceeded", http.StatusTooManyRequests)
 			return
+		}
+
+		if plan.MonthlyQuota > 0 {
+			// Quota fails open like the rate limiter; over-quota attempts keep
+			// counting, so the rollup must bill min(count, quota).
+			used, err := monthlyUsage(r.Context(), rdb, key.ID)
+			if err != nil {
+				log.Printf("quota error: key=%s err=%v", key.ID, err)
+			} else if used > plan.MonthlyQuota {
+				http.Error(w, "monthly quota exceeded", http.StatusTooManyRequests)
+				return
+			}
 		}
 
 		New(target, route.Secret).ServeHTTP(w, r)

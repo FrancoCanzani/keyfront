@@ -55,7 +55,7 @@ export function WorkspaceSwitcher() {
   return (
     <>
       <DropdownMenu>
-        <DropdownMenuTrigger className="flex h-8 min-w-0 flex-1 items-center gap-1.5 rounded-md px-2 text-left text-sm outline-none hover:bg-sidebar-accent hover:text-sidebar-accent-foreground focus-visible:ring-2 focus-visible:ring-ring group-data-[collapsible=icon]:hidden">
+        <DropdownMenuTrigger className="flex h-8 min-w-0 flex-1 items-center justify-between gap-1.5 rounded-md px-2 text-left text-sm outline-none hover:bg-sidebar-accent hover:text-sidebar-accent-foreground focus-visible:ring-2 focus-visible:ring-ring group-data-[collapsible=icon]:hidden">
           <span className="truncate">{active?.name ?? "Keyfront"}</span>
           <CaretUpDownIcon className="size-3.5 shrink-0 text-muted-foreground" />
         </DropdownMenuTrigger>
