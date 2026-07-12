@@ -12,9 +12,10 @@ import (
 const routeTTL = 30 * time.Second
 
 type Route struct {
-	Host     string `json:"host"`
-	Upstream string `json:"upstream"`
-	Secret   string `json:"secret"`
+	Host      string `json:"host"`
+	Upstream  string `json:"upstream"`
+	Secret    string `json:"secret"`
+	ServiceID string `json:"service_id"`
 }
 
 type entry struct {
@@ -71,4 +72,52 @@ func Get(ctx context.Context, rdb *redis.Client, host string) (Route, error) {
 	}
 
 	return route, nil
+}
+
+type Key struct {
+	ID             string `json:"id"`
+	OrganizationID string `json:"organization_id"`
+	IdentityID     string `json:"identity_id"`
+	ServiceID      string `json:"service_id"`
+	PlanID         string `json:"plan_id"`
+	Environment    string `json:"environment"`
+	Status         string `json:"status"`
+}
+
+// Keys are read straight from Redis on every request, never cached in memory,
+// so a revoke takes effect on the next request.
+func GetKey(ctx context.Context, rdb *redis.Client, hash string) (Key, error) {
+	var key Key
+
+	data, err := rdb.Get(ctx, "key:"+hash).Bytes()
+	if err != nil {
+		return key, err
+	}
+
+	if err := json.Unmarshal(data, &key); err != nil {
+		return key, err
+	}
+
+	return key, nil
+}
+
+type Plan struct {
+	RateLimit    int   `json:"rate_limit"`
+	Burst        int   `json:"burst"`
+	MonthlyQuota int64 `json:"monthly_quota"`
+}
+
+func GetPlan(ctx context.Context, rdb *redis.Client, planID string) (Plan, error) {
+	var plan Plan
+
+	data, err := rdb.Get(ctx, "plan:"+planID).Bytes()
+	if err != nil {
+		return plan, err
+	}
+
+	if err := json.Unmarshal(data, &plan); err != nil {
+		return plan, err
+	}
+
+	return plan, nil
 }

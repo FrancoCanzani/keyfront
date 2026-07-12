@@ -13,23 +13,23 @@ import (
 
 var ErrNoRoute = errors.New("no route for host")
 
-func Resolve(ctx context.Context, cache *store.Cache, host string) (*url.URL, string, error) {
+func Resolve(ctx context.Context, cache *store.Cache, host string) (*url.URL, store.Route, error) {
 	if h, _, err := net.SplitHostPort(host); err == nil {
 		host = h
 	}
 
 	route, err := cache.Get(ctx, host)
 	if errors.Is(err, redis.Nil) {
-		return nil, "", ErrNoRoute
+		return nil, store.Route{}, ErrNoRoute
 	}
 	if err != nil {
-		return nil, "", err
+		return nil, store.Route{}, err
 	}
 
 	target, err := url.Parse(route.Upstream)
 	if err != nil {
-		return nil, "", err
+		return nil, store.Route{}, err
 	}
 
-	return target, route.Secret, nil
+	return target, route, nil
 }

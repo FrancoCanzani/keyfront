@@ -11,12 +11,16 @@ import (
 	"github.com/francocanzani/keyfront/internal/store"
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/chi/v5/middleware"
+	"github.com/go-redis/redis_rate/v10"
 )
 
 func main() {
 	cfg := config.Get()
 
 	rdb := redis.New()
+
+	limiter := redis_rate.NewLimiter(rdb)
+
 	if err := rdb.Ping(context.Background()).Err(); err != nil {
 		log.Fatalf("redis: %v", err)
 	}
@@ -30,7 +34,7 @@ func main() {
 	})
 
 	cache := store.NewCache(rdb)
-	router.Handle("/*", proxy.Handler(cache))
+	router.Handle("/*", proxy.Handler(cache, rdb, limiter))
 
 	log.Printf("gateway listening on %s", cfg.Address)
 	if err := http.ListenAndServe(cfg.Address, router); err != nil {
