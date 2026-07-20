@@ -1,7 +1,10 @@
 {
   "name": "vurl",
   "private": true,
-  "workspaces": ["apps/*", "packages/*"],
+  "workspaces": [
+    "apps/*",
+    "packages/*"
+  ],
   "packageManager": "bun@1.2.21",
   "scripts": {
     "predev": "pg_isready -q -h localhost 2>/dev/null || brew services start postgresql@16",
@@ -14,6 +17,7 @@
     "db:migrate:prod": "[ -n \"$DATABASE_URL_PROD\" ] || { echo 'DATABASE_URL_PROD is not set (root .env)'; exit 1; }; DATABASE_URL=\"$DATABASE_URL_PROD\" bun run --cwd apps/web db:migrate"
   },
   "devDependencies": {
+    "@types/node": "^26.1.1",
     "turbo": "^2.5.0"
   }
 }

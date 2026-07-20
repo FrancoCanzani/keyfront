@@ -59,7 +59,7 @@ export function Onboarding() {
             Set up your workspace
           </h1>
           <p className="mt-3 text-sm leading-6 text-muted-foreground">
-            Tell us who you are and name your organization.
+            Tell us who you are and name your workspace.
           </p>
 
           <form
@@ -99,12 +99,12 @@ export function Onboarding() {
             <form.Field
               name="organizationName"
               validators={{
-                onChange: z.string().min(1, "Enter an organization name"),
+                onChange: z.string().min(1, "Enter a workspace name"),
               }}
             >
               {(field) => (
                 <div className="space-y-2">
-                  <Label htmlFor={field.name}>Organization name</Label>
+                  <Label htmlFor={field.name}>Workspace name</Label>
                   <Input
                     id={field.name}
                     name={field.name}
@@ -112,7 +112,7 @@ export function Onboarding() {
                     onBlur={field.handleBlur}
                     onChange={(event) => field.handleChange(event.target.value)}
                     aria-invalid={field.state.meta.errors.length > 0}
-                    placeholder="Acme Inc"
+                    placeholder="Ada's workspace"
                     className="w-full"
                   />
                   {field.state.meta.errors.length > 0 ? (

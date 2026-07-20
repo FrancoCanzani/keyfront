@@ -52,13 +52,12 @@ export function SignIn() {
               onChange={(event) => setEmail(event.target.value)}
               placeholder="you@example.com"
               aria-invalid={Boolean(error)}
+              className="w-full"
             />
-            {error ? (
-              <p className="text-xs text-destructive">{error}</p>
-            ) : null}
+            {error ? <p className="text-xs text-destructive">{error}</p> : null}
             <Button type="submit" disabled={isSubmitting} className="w-full">
               {isSubmitting ? (
-                <LoaderCircle className="animate-spin" />
+                <LoaderCircle className="animate-spin size-3" />
               ) : (
                 "Continue with email"
               )}

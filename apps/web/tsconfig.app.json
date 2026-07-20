@@ -20,10 +20,10 @@
     "noFallthroughCasesInSwitch": true,
     "noUncheckedSideEffectImports": true,
 
-    "types": ["vite/client", "bun-types"],
+    "types": ["vite/client", "bun-types", "node"],
     "paths": {
       "@/*": ["./src/frontend/*"]
     }
   },
-  "include": ["src/frontend", "src/server"]
+  "include": ["src/frontend", "src/backend"]
 }

@@ -1,28 +1,22 @@
-import { type CSSProperties, useState } from "react";
+import type { CSSProperties } from "react";
 import { Outlet } from "@tanstack/react-router";
-import { SidebarInset, SidebarProvider } from "@/components/ui/sidebar";
-import { AppSidebar } from "@/features/dashboard/app-sidebar";
+import { SidebarInset, SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
+import { AppSidebar } from "@/features/dashboard/components/app-sidebar";
 
 export function Dashboard() {
-  const [sidebarOpen, setSidebarOpen] = useState(true);
-
   return (
     <SidebarProvider
-      collapsible="icon"
-      open={sidebarOpen}
-      onOpenChange={setSidebarOpen}
-      className="!grid grid-cols-[minmax(0,1fr)] md:grid-cols-[var(--sidebar-layout-width)_minmax(0,1fr)]"
-      style={
-        {
-          "--sidebar-layout-width": sidebarOpen
-            ? "var(--sidebar-width)"
-            : "var(--sidebar-width-icon)",
-        } as CSSProperties
-      }
+      defaultOpen={false}
+      style={{ "--sidebar-width": "13rem" } as CSSProperties}
     >
       <AppSidebar />
       <SidebarInset>
-        <Outlet />
+        <header className="absolute inset-x-0 top-0 z-20 flex h-12 items-center px-4 md:hidden">
+          <SidebarTrigger />
+        </header>
+        <div className="mx-auto w-full max-w-5xl px-6 pt-12 md:pt-0">
+          <Outlet />
+        </div>
       </SidebarInset>
     </SidebarProvider>
   );
