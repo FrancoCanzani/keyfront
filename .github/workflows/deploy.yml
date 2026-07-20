@@ -28,13 +28,12 @@ jobs:
       - if: steps.token.outputs.ok == 'true'
         run: bun install --frozen-lockfile
 
-      - name: Migrate + redis sync
+      - name: Migrate
         if: steps.token.outputs.ok == 'true'
         working-directory: apps/web
         run: bun run release
         env:
           DATABASE_URL: ${{ secrets.DATABASE_URL_PROD }}
-          REDIS_URL: ${{ secrets.REDIS_URL_PROD }}
 
       - name: Deploy worker
         if: steps.token.outputs.ok == 'true'
@@ -42,22 +41,3 @@ jobs:
         run: bun run build && bunx wrangler deploy
         env:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
-
-  gateway:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-
-      # skips quietly until FLY_API_TOKEN is configured
-      - name: Check token
-        id: token
-        run: echo "ok=${{ secrets.FLY_API_TOKEN != '' }}" >> "$GITHUB_OUTPUT"
-
-      - uses: superfly/flyctl-actions/setup-flyctl@master
-        if: steps.token.outputs.ok == 'true'
-
-      - name: Deploy gateway
-        if: steps.token.outputs.ok == 'true'
-        run: flyctl deploy --remote-only --config apps/gateway/fly.toml
-        env:
-          FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN }}

@@ -4,7 +4,6 @@ Bare-bones scaffold for vurl, a URL shortener.
 
 - **`apps/web/`** — Bun + Hono + TanStack Router control plane + dashboard.
   better-auth (magic link + organization), Drizzle (Postgres), shadcn/Tailwind.
-- **`apps/docs/`** — docs site.
 
 ## Dev
 

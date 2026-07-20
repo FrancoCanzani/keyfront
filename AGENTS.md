@@ -17,7 +17,6 @@ shortener domain logic yet.
 
 - **`apps/web`** — Bun + Hono + TanStack Router control plane + dashboard.
   better-auth (magic link + organization), Drizzle over Postgres, shadcn/Tailwind.
-- **`apps/docs`** — Next.js docs site, untouched by the rebuild.
 - **Postgres** (local via brew in dev; PlanetScale at deploy). **No Docker**
   locally.
 
