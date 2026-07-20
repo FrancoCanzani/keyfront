@@ -50,7 +50,7 @@ export function Onboarding() {
   return (
     <main className="relative min-h-dvh overflow-hidden">
       <div className="absolute left-6 top-6 sm:left-8 sm:top-8">
-        <span className="text-sm tracking-[-0.02em]">Keyfront</span>
+        <span className="text-sm tracking-[-0.02em]">vurl</span>
       </div>
 
       <div className="flex min-h-dvh items-center justify-center px-6 py-28">

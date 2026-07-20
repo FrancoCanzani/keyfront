@@ -1,2 +1,0 @@
-ALTER TABLE "service" ADD COLUMN "default_plan_id" text;--> statement-breakpoint
-ALTER TABLE "service" ADD CONSTRAINT "service_default_plan_id_plan_id_fk" FOREIGN KEY ("default_plan_id") REFERENCES "public"."plan"("id") ON DELETE set null ON UPDATE no action;

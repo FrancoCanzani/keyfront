@@ -1,42 +1,28 @@
-# Keyfront
+# vurl
 
-Put your API behind us and get keys, rate limiting, usage analytics, and
-billing — with zero code changes.
+Bare-bones scaffold for vurl, a URL shortener.
 
-Split into two planes:
-
-- **`apps/gateway/`** — Go data plane (the proxy hot path). `chi`, `pgx`, `go-redis`.
 - **`apps/web/`** — Bun + Hono + TanStack Router control plane + dashboard.
-  better-auth, Drizzle (Postgres), shadcn/Tailwind.
-
-The control plane owns the schema (Drizzle) and writes config; the Go data plane
-reads it. Shared Postgres is the source of truth.
+  better-auth (magic link + organization), Drizzle (Postgres), shadcn/Tailwind.
+- **`apps/docs/`** — docs site.
 
 ## Dev
 
 ```bash
 bun install
-bun dev             # starts Postgres/Redis if down, then turbo: Go gateway
-                    # (:8080), control (Vite :5173, Hono :8787), echo origin (:9000)
-
-# one app only
-bun run --cwd apps/gateway dev
-bun run --cwd apps/web dev
+bun dev             # starts Postgres if down, then turbo: web (Vite :5173, Hono :8787)
 ```
 
-- Control: open http://localhost:5173 — sign in via magic link (the link is
-  printed to the server console in dev).
+- Open http://localhost:5173 — sign in via magic link (the link is printed to
+  the server console in dev).
 - Schema: `bun run db:generate` (drizzle-kit generate), then
   `bun run db:migrate:dev` (apply locally) or `bun run db:migrate:prod`
   (PlanetScale, reads `DATABASE_URL_PROD`) — all from the repo root.
 
-Local Postgres + Redis run as brew services (no Docker). Swap `DATABASE_URL` for
-PlanetScale at deploy; Redis stays self-hosted.
+Local Postgres runs as a brew service (no Docker). Swap `DATABASE_URL` for
+PlanetScale at deploy.
 
 ## Status
 
-- Data plane (Go): `/health` pings Postgres + Redis.
-- Control plane (Hono + TanStack): magic-link auth (better-auth) wired
-  end-to-end; `/api/health`; dashboard shell.
-
-See `plan.md` for architecture and roadmap.
+Auth (better-auth, magic link + organization) wired end-to-end; `/api/health`;
+dashboard shell with no shortener domain logic yet.

@@ -8,7 +8,7 @@ export function Landing() {
   return (
     <main className="min-h-dvh bg-background">
       <header className="flex h-16 items-center justify-between px-6 sm:px-8">
-        <span className="text-sm tracking-[-0.02em]">Keyfront</span>
+        <span className="text-sm tracking-[-0.02em]">vurl</span>
         <Button asChild variant="outline" size="sm">
           <Link to={session ? "/dashboard" : "/sign-in"} disabled={isPending}>
             {session ? "Dashboard" : "Sign in"}

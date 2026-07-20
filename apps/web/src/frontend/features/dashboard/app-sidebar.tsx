@@ -11,9 +11,6 @@ import {
   Sidebar,
   SidebarContent,
   SidebarFooter,
-  SidebarGroup,
-  SidebarGroupContent,
-  SidebarGroupLabel,
   SidebarHeader,
   SidebarMenu,
   SidebarMenuButton,
@@ -21,98 +18,14 @@ import {
   SidebarRail,
   SidebarTrigger,
 } from "@/components/ui/sidebar";
-import { serviceQueryOptions } from "@/features/services/queries";
-import { WorkspaceSwitcher } from "@/features/workspace/workspace-switcher";
 import { authClient } from "@/lib/auth-client";
-import { useQuery } from "@tanstack/react-query";
-import { Link, useLocation, useParams } from "@tanstack/react-router";
-import type { Icon } from "@phosphor-icons/react";
-import {
-  ArrowLeftIcon,
-  CaretUpDownIcon,
-  ChartLineUpIcon,
-  CubeIcon,
-  GaugeIcon,
-  GearIcon,
-  KeyIcon,
-  PlayIcon,
-  PulseIcon,
-  ShieldCheckIcon,
-  UserIcon,
-  UsersIcon,
-} from "@phosphor-icons/react";
-
-type NavItem = {
-  label: string;
-  icon: Icon;
-  to?: string;
-};
-
-const globalItems: NavItem[] = [
-  { label: "Services", icon: CubeIcon, to: "/dashboard" },
-  { label: "Identities", icon: UsersIcon, to: "/dashboard/identities" },
-  { label: "Settings", icon: GearIcon, to: "/dashboard/settings" },
-];
-
-function serviceItems(serviceId: string): NavItem[] {
-  const base = `/dashboard/services/${serviceId}`;
-  return [
-    { label: "Overview", icon: GaugeIcon, to: base },
-    { label: "Keys", icon: KeyIcon, to: `${base}/keys` },
-    { label: "Plans", icon: ShieldCheckIcon, to: `${base}/plans` },
-    { label: "Playground", icon: PlayIcon, to: `${base}/playground` },
-    { label: "Request logs", icon: PulseIcon },
-    { label: "Usage", icon: ChartLineUpIcon },
-    { label: "Settings", icon: GearIcon, to: `${base}/settings` },
-  ];
-}
-
-function NavMenu({ items, pathname }: { items: NavItem[]; pathname: string }) {
-  return (
-    <SidebarMenu className="gap-1">
-      {items.map((item) => {
-        const active = item.to ? pathname === item.to : false;
-
-        return (
-          <SidebarMenuItem key={item.label}>
-            <SidebarMenuButton
-              asChild={Boolean(item.to)}
-              tooltip={item.label}
-              isActive={active}
-              className="[&_svg]:size-3.5 group-data-[collapsible=icon]:[&_svg]:size-4"
-            >
-              {item.to ? (
-                <Link to={item.to}>
-                  <item.icon weight={active ? "fill" : "regular"} />
-                  <span>{item.label}</span>
-                </Link>
-              ) : (
-                <>
-                  <item.icon weight="regular" />
-                  <span className="text-muted-foreground">{item.label}</span>
-                </>
-              )}
-            </SidebarMenuButton>
-          </SidebarMenuItem>
-        );
-      })}
-    </SidebarMenu>
-  );
-}
+import { CaretUpDownIcon, UserIcon } from "@phosphor-icons/react";
 
 export function AppSidebar() {
   const { data: session } = authClient.useSession();
-  const { pathname } = useLocation();
-  const params = useParams({ strict: false });
-  const serviceId = params.serviceId;
 
-  const serviceQuery = useQuery({
-    ...serviceQueryOptions(serviceId ?? ""),
-    enabled: Boolean(serviceId),
-  });
-
-  const name = session?.user.name || "Franco";
-  const email = session?.user.email || "Personal workspace";
+  const name = session?.user.name || "Account";
+  const email = session?.user.email || "";
 
   async function signOut() {
     await authClient.signOut();
@@ -123,50 +36,12 @@ export function AppSidebar() {
     <Sidebar className="z-20">
       <SidebarHeader className="h-12 justify-center">
         <div className="flex items-center gap-2 p-1 group-data-[collapsible=icon]:justify-center">
-          <WorkspaceSwitcher />
+          <span className="text-sm tracking-[-0.02em]">vurl</span>
           <SidebarTrigger className="*:size-3.5 group-data-[collapsible=icon]:*:size-4" />
         </div>
       </SidebarHeader>
 
-      <SidebarContent className="gap-1">
-        {serviceId ? (
-          <>
-            <SidebarGroup className="pb-0">
-              <SidebarGroupContent>
-                <SidebarMenu className="gap-1">
-                  <SidebarMenuItem>
-                    <SidebarMenuButton
-                      asChild
-                      tooltip="Services"
-                      className="text-muted-foreground [&_svg]:size-3.5 group-data-[collapsible=icon]:[&_svg]:size-4"
-                    >
-                      <Link to="/dashboard">
-                        <ArrowLeftIcon />
-                        <span>Services</span>
-                      </Link>
-                    </SidebarMenuButton>
-                  </SidebarMenuItem>
-                </SidebarMenu>
-              </SidebarGroupContent>
-            </SidebarGroup>
-
-            <SidebarGroup>
-              <SidebarGroupLabel className="truncate">
-                {serviceQuery.data?.name ?? "Service"}
-              </SidebarGroupLabel>
-              <SidebarGroupContent>
-                <NavMenu items={serviceItems(serviceId)} pathname={pathname} />
-              </SidebarGroupContent>
-            </SidebarGroup>
-          </>
-        ) : (
-          <SidebarGroup>
-            <SidebarGroupContent>
-              <NavMenu items={globalItems} pathname={pathname} />
-            </SidebarGroupContent>
-          </SidebarGroup>
-        )}
-      </SidebarContent>
+      <SidebarContent className="gap-1" />
 
       <SidebarFooter className="p-2">
         <SidebarMenu className="gap-1">
@@ -198,18 +73,13 @@ export function AppSidebar() {
                 </DropdownMenuLabel>
                 <DropdownMenuSeparator />
                 <DropdownMenuGroup>
-                  <DropdownMenuItem asChild>
-                    <Link to="/dashboard/settings">Settings</Link>
+                  <DropdownMenuItem
+                    variant="destructive"
+                    onSelect={() => void signOut()}
+                  >
+                    Sign out
                   </DropdownMenuItem>
-                  <DropdownMenuItem>Documentation</DropdownMenuItem>
                 </DropdownMenuGroup>
-                <DropdownMenuSeparator />
-                <DropdownMenuItem
-                  variant="destructive"
-                  onSelect={() => void signOut()}
-                >
-                  Sign out
-                </DropdownMenuItem>
               </DropdownMenuContent>
             </DropdownMenu>
           </SidebarMenuItem>

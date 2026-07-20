@@ -28,7 +28,7 @@ export async function sendEmail(input: SendEmailInput) {
       },
       body: JSON.stringify({
         to: input.to,
-        from: { address: fromAddress, name: "Keyfront" },
+        from: { address: fromAddress, name: "vurl" },
         subject: input.subject,
         html: input.html,
         text: input.text,

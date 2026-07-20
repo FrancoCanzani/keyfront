@@ -40,7 +40,7 @@ export function SignIn() {
   return (
     <main className="relative min-h-dvh overflow-hidden">
       <div className="absolute left-6 top-6 sm:left-8 sm:top-8">
-        <span className="text-sm tracking-[-0.02em]">Keyfront</span>
+        <span className="text-sm tracking-[-0.02em]">vurl</span>
       </div>
 
       <div className="flex min-h-dvh items-center justify-center px-6 py-28">
@@ -78,7 +78,7 @@ export function SignIn() {
                 Welcome back
               </h1>
               <p className="mt-3 text-sm leading-6 text-muted-foreground">
-                Sign in to manage your gateways, keys, and traffic.
+                Sign in to manage your links.
               </p>
 
               <form className="mt-6" onSubmit={handleSubmit}>

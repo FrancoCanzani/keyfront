@@ -1,8 +1,0 @@
-{
-  "name": "gateway",
-  "private": true,
-  "scripts": {
-    "dev": "$(go env GOPATH)/bin/air",
-    "build": "go build ./..."
-  }
-}

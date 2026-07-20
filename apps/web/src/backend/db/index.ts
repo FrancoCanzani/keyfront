@@ -1,18 +1,13 @@
 import { drizzle } from "drizzle-orm/postgres-js";
 import postgres from "postgres";
 import * as auth from "./schema/auth";
-import * as identity from "./schema/identity";
-import * as key from "./schema/key";
-import * as plan from "./schema/plan";
-import * as service from "./schema/service";
-import * as usage from "./schema/usage";
 
-const schema = { ...auth, ...service, ...identity, ...plan, ...key, ...usage };
+const schema = { ...auth };
 
 export function createDatabase() {
   const client = postgres(
     process.env.DATABASE_URL ??
-      `postgres://${process.env.USER ?? "postgres"}@localhost/api_gateway`,
+      `postgres://${process.env.USER ?? "postgres"}@localhost/vurl`,
   );
   return {
     db: drizzle(client, { schema }),

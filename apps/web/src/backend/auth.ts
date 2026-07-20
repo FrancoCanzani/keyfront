@@ -72,7 +72,7 @@ export function createAuth(db: Database) {
           }
           await sendEmail({
             to: data.email,
-            subject: `Join ${data.organization.name} on Keyfront`,
+            subject: `Join ${data.organization.name} on vurl`,
             text: `${data.inviter.user.name || data.inviter.user.email} invited you to join ${data.organization.name}.\n\nAccept: ${url}`,
             html: `<p>${data.inviter.user.name || data.inviter.user.email} invited you to join <strong>${data.organization.name}</strong>.</p><p><a href="${url}">Accept invitation</a></p>`,
           });
@@ -90,7 +90,7 @@ export function createAuth(db: Database) {
           }
           await sendEmail({
             to: email,
-            subject: "Sign in to Keyfront",
+            subject: "Sign in to vurl",
             text: `Sign in: ${clientUrl}\n\nThis link can only be used once. If you didn't request it, ignore this email.`,
             html: `<p><a href="${clientUrl}">Click here to sign in</a></p><p>This link can only be used once. If you didn't request it, ignore this email.</p>`,
           });
