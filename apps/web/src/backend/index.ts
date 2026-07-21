@@ -4,7 +4,7 @@ import { logger } from "hono/logger";
 import { createAuth } from "./auth";
 import { checkDb } from "./db";
 import { authMiddleware } from "./middleware/auth";
-import links from "./routes/protected/links/index";
+import { links } from "./routes/protected/links";
 import type { AppRouteEnv } from "./types";
 
 const app = new Hono<AppRouteEnv>();
@@ -24,12 +24,10 @@ app.on(["POST", "GET"], "/api/auth/*", (c) =>
   createAuth(c.get("db")).handler(c.req.raw),
 );
 
-links.route('/links', links)
-
-
 export const apiRoutes = app
   .basePath("/api")
-  .get("/health", async (c) => c.json({ ok: await checkDb(c.get("db")) }));
+  .get("/health", async (c) => c.json({ ok: await checkDb(c.get("db")) }))
+  .route("/links", links);
 
 export type AppType = typeof apiRoutes;
 

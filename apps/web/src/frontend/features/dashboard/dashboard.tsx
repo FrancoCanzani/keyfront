@@ -1,23 +1,15 @@
-import type { CSSProperties } from "react";
 import { Outlet } from "@tanstack/react-router";
-import { SidebarInset, SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
-import { AppSidebar } from "@/features/dashboard/components/app-sidebar";
+import { BottomNav } from "@/features/dashboard/components/bottom-nav";
+import { DashboardHeader } from "@/features/dashboard/components/dashboard-header";
 
 export function Dashboard() {
   return (
-    <SidebarProvider
-      defaultOpen={false}
-      style={{ "--sidebar-width": "13rem" } as CSSProperties}
-    >
-      <AppSidebar />
-      <SidebarInset>
-        <header className="absolute inset-x-0 top-0 z-20 flex h-12 items-center px-4 md:hidden">
-          <SidebarTrigger />
-        </header>
-        <div className="mx-auto w-full max-w-5xl px-6 pt-12 md:pt-0">
-          <Outlet />
-        </div>
-      </SidebarInset>
-    </SidebarProvider>
+    <div className="min-h-dvh">
+      <DashboardHeader />
+      <main className="mx-auto w-full max-w-4xl px-6 pb-24 md:pb-20">
+        <Outlet />
+      </main>
+      <BottomNav />
+    </div>
   );
 }
