@@ -4,6 +4,7 @@ import { logger } from "hono/logger";
 import { createAuth } from "./auth";
 import { checkDb } from "./db";
 import { authMiddleware } from "./middleware/auth";
+import links from "./routes/protected/links/index";
 import type { AppRouteEnv } from "./types";
 
 const app = new Hono<AppRouteEnv>();
@@ -22,6 +23,9 @@ app.onError((error, c) => {
 app.on(["POST", "GET"], "/api/auth/*", (c) =>
   createAuth(c.get("db")).handler(c.req.raw),
 );
+
+links.route('/links', links)
+
 
 export const apiRoutes = app
   .basePath("/api")

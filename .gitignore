@@ -29,3 +29,7 @@ apps/web/src/frontend/routeTree.gen.ts
 
 apps/web/.wrangler/
 cookie.txt
+
+# agents
+.agents
+.claude
