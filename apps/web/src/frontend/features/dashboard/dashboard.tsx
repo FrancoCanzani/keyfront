@@ -1,6 +1,6 @@
-import { Outlet } from "@tanstack/react-router";
 import { BottomNav } from "@/features/dashboard/components/bottom-nav";
 import { DashboardHeader } from "@/features/dashboard/components/dashboard-header";
+import { Outlet } from "@tanstack/react-router";
 
 export function Dashboard() {
   return (

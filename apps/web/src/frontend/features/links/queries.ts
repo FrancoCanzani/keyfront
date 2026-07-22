@@ -1,5 +1,9 @@
 import { client } from "@/lib/api";
-import { queryOptions, useMutation, useQueryClient } from "@tanstack/react-query";
+import {
+  queryOptions,
+  useMutation,
+  useQueryClient,
+} from "@tanstack/react-query";
 import type { InferResponseType } from "hono/client";
 
 export type Link = InferResponseType<(typeof client.api.links)["$get"]>[number];

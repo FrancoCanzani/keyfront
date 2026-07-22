@@ -4,6 +4,7 @@ import type { Database } from "./db";
 type Session = Auth["$Infer"]["Session"];
 
 export type AppRouteEnv = {
+  Bindings: Env;
   Variables: {
     db: Database;
     user: Session["user"] | null;

@@ -1,9 +1,16 @@
+import { z } from "zod";
+
 type SendEmailInput = {
   to: string;
   subject: string;
   html: string;
   text: string;
 };
+
+const sendEmailResponseSchema = z.object({
+  success: z.boolean(),
+  errors: z.array(z.unknown()).optional(),
+});
 
 const accountId = process.env.CF_ACCOUNT_ID;
 const apiToken = process.env.CF_EMAIL_API_TOKEN;
@@ -36,7 +43,7 @@ export async function sendEmail(input: SendEmailInput) {
     },
   );
 
-  const body = (await res.json()) as { success: boolean; errors?: unknown[] };
+  const body = sendEmailResponseSchema.parse(await res.json());
   if (!res.ok || !body.success) {
     throw new Error(
       `email send failed (${res.status}): ${JSON.stringify(body.errors)}`,

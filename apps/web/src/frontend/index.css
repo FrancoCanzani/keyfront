@@ -4,14 +4,12 @@
 @import "shadcn/tailwind.css";
 @import "@fontsource-variable/geist";
 @import "@fontsource-variable/geist-mono";
-@import "@fontsource-variable/inter";
-@import "@fontsource-variable/roboto-slab";
 
 @custom-variant dark (&:is(.dark *));
 
 @theme inline {
-    --font-heading: 'Roboto Slab Variable', serif;
-    --font-sans: 'Inter Variable', sans-serif;
+    --font-heading: 'Geist Variable', sans-serif;
+    --font-sans: 'Geist Variable', sans-serif;
     --font-mono: 'Geist Mono Variable', ui-monospace, monospace;
 
     --breakpoint-xs: 430px;

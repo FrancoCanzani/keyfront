@@ -25,5 +25,5 @@
       "@/*": ["./src/frontend/*"]
     }
   },
-  "include": ["src/frontend", "src/backend"]
+  "include": ["src/frontend", "src/backend", "worker-configuration.d.ts"]
 }

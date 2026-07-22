@@ -1,5 +1,7 @@
 import { Button } from "@/components/ui/button";
+import { Empty, EmptyDescription, EmptyTitle } from "@/components/ui/empty";
 import { Input } from "@/components/ui/input";
+import { copyToClipboard } from "@/lib/utils";
 import { CopyIcon, TrashIcon } from "@phosphor-icons/react";
 import { useQuery } from "@tanstack/react-query";
 import { type SyntheticEvent, useState } from "react";
@@ -25,7 +27,7 @@ export function LinksPage() {
   }
 
   async function copy(key: string) {
-    await navigator.clipboard.writeText(`${window.location.origin}/r/${key}`);
+    await copyToClipboard(`${window.location.origin}/r/${key}`);
     toast.success("Copied");
   }
 
@@ -39,9 +41,14 @@ export function LinksPage() {
           value={url}
           onChange={(event) => setUrl(event.target.value)}
           placeholder="Paste a URL"
-          className="flex-1"
+          className="flex-1 h-8"
         />
-        <Button type="submit" disabled={createLink.isPending}>
+        <Button
+          type="submit"
+          variant={"outline"}
+          size={"sm"}
+          disabled={createLink.isPending}
+        >
           Shorten
         </Button>
       </form>
@@ -90,7 +97,12 @@ export function LinksPage() {
             ))}
           </ul>
         ) : (
-          <p className="text-sm text-muted-foreground">No links yet.</p>
+          <Empty>
+            <EmptyTitle>No links yet</EmptyTitle>
+            <EmptyDescription>
+              Shorten a URL above to see it here.
+            </EmptyDescription>
+          </Empty>
         )}
       </div>
     </div>

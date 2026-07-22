@@ -13,7 +13,19 @@
   },
   "vars": {
     "BETTER_AUTH_URL": "http://localhost:5173"
-  }
+  },
+  "kv_namespaces": [
+    {
+      "binding": "LINKS_CACHE",
+      "id": "9a12af729f5944399e783db23dcf7f17"
+    }
+  ],
+  "analytics_engine_datasets": [
+    {
+      "binding": "LINK_CLICKS",
+      "dataset": "link_clicks"
+    }
+  ]
   // prod secrets (wrangler secret put): DATABASE_URL (PlanetScale pooled),
   // BETTER_AUTH_SECRET, BETTER_AUTH_URL,
   // CF_ACCOUNT_ID, CF_EMAIL_API_TOKEN, EMAIL_FROM

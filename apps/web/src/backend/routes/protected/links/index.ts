@@ -4,6 +4,11 @@ import { Hono } from "hono";
 import { HTTPException } from "hono/http-exception";
 import { z } from "zod";
 import { link } from "../../../db/schema/link";
+import {
+  type CachedLink,
+  LINKS_CACHE_TTL_SECONDS,
+  linkCacheKey,
+} from "../../../lib/links-cache";
 import { nanoid } from "../../../lib/nanoid";
 import { getOrganizationId } from "../../../middleware/auth";
 import type { AppRouteEnv } from "../../../types";
@@ -14,7 +19,7 @@ function isUniqueViolation(error: unknown): boolean {
     typeof error === "object" &&
     error !== null &&
     "code" in error &&
-    (error as { code?: string }).code === "23505"
+    error.code === "23505"
   );
 }
 
@@ -57,6 +62,17 @@ export const links = new Hono<AppRouteEnv>()
         if (!row) {
           throw new HTTPException(500, { message: "Failed to create link" });
         }
+
+        const record: CachedLink = {
+          url: row.url,
+          expiresAt: row.expiresAt?.toISOString() ?? null,
+        };
+        await c.env.LINKS_CACHE.put(
+          linkCacheKey(row.key),
+          JSON.stringify(record),
+          { expirationTtl: LINKS_CACHE_TTL_SECONDS },
+        );
+
         return c.json(row, 201);
       } catch (error) {
         if (!isUniqueViolation(error)) {
@@ -83,11 +99,13 @@ export const links = new Hono<AppRouteEnv>()
       const [deleted] = await db
         .delete(link)
         .where(and(eq(link.id, id), eq(link.organizationId, organizationId)))
-        .returning({ id: link.id });
+        .returning({ id: link.id, key: link.key });
 
       if (!deleted) {
         throw new HTTPException(404, { message: "Link not found" });
       }
+
+      await c.env.LINKS_CACHE.delete(linkCacheKey(deleted.key));
 
       return c.json({ id: deleted.id });
     },

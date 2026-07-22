@@ -1,6 +1,6 @@
 import { cn } from "@/lib/utils";
-import { GearIcon, LinkIcon } from "@phosphor-icons/react";
 import type { Icon } from "@phosphor-icons/react";
+import { GearIcon, LinkIcon } from "@phosphor-icons/react";
 import { Link, useLocation } from "@tanstack/react-router";
 
 type NavItem = {

@@ -25,7 +25,10 @@ export function DashboardHeader() {
   return (
     <header className="sticky top-0 z-20 bg-background">
       <div className="mx-auto flex h-12 w-full max-w-4xl items-center justify-between px-6">
-        <Link to="/dashboard" className="text-sm font-medium tracking-[-0.02em]">
+        <Link
+          to="/dashboard"
+          className="text-xl capitalize font-medium font-mono"
+        >
           vurl
         </Link>
 
@@ -36,7 +39,7 @@ export function DashboardHeader() {
               className="flex items-center gap-2 rounded-md px-2 py-1 text-sm text-muted-foreground hover:bg-accent hover:text-foreground"
             >
               <span className="max-w-32 truncate">{name}</span>
-              <CaretUpDownIcon className="size-3.5" />
+              <CaretUpDownIcon className="size-3" />
             </button>
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end" sideOffset={8} className="min-w-48">

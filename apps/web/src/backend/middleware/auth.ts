@@ -22,7 +22,13 @@ export const authMiddleware = createMiddleware<AppRouteEnv>(async (c, next) => {
     }
 
     const auth = createAuth(db);
-    const session = await auth.api.getSession({ headers: c.req.raw.headers });
+    let session;
+    try {
+      session = await auth.api.getSession({ headers: c.req.raw.headers });
+    } catch (error) {
+      if (process.env.NODE_ENV === "production") throw error;
+      session = null;
+    }
     if (session?.user) {
       c.set("user", session.user);
       c.set("session", session.session);
